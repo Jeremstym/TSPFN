@@ -148,7 +148,7 @@ class TSPFNFineTuning(TSPFNSystem):
             )
         elif foundation_model_name == "labram":
             self.ts_tokenizer = TimeSeriesLabramEncoder(
-                pretrained_weights="/home/stympopper/pretrainingTSPFN/ckpts/labram-base.pth",
+                pretrained_weights="/path/to/folder/ckpts/labram-base.pth",
             )
         elif foundation_model_name is None:
             self.ts_tokenizer = None

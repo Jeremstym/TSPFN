@@ -8,8 +8,8 @@ from sktime.datatypes import convert_to
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
-ORIGIN_DIRECTORY = "/data/stympopper/BenchmarkTSPFN/AtrialFibrillation/"
-OUTPUT_DIRECTORY = "/data/stympopper/BenchmarkTSPFN/processed/AtrialFibrillation/"
+ORIGIN_DIRECTORY = "/path/to/folder/AtrialFibrillation/"
+OUTPUT_DIRECTORY = "/path/to/folder/AtrialFibrillation/"
 SPLIT_TRAIN = "train"
 SPLIT_TEST = "test"
 

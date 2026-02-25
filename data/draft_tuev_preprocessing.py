@@ -202,7 +202,7 @@ if __name__ == "__main__":
     TUEV dataset is downloaded from https://isip.piconepress.com/projects/tuh_eeg/html/downloads.shtml
     """
 
-    root = "/data/stympopper/FullTUEV/edf"
+    root = "/path/to/folder//FullTUEV/edf"
     train_out_dir = os.path.join(root, "processed_train")
     eval_out_dir = os.path.join(root, "processed_eval")
     if not os.path.exists(train_out_dir):
@@ -225,7 +225,7 @@ if __name__ == "__main__":
     load_up_objects(BaseDirEval, EvalFeatures, EvalLabels, EvalOffendingChannel, eval_out_dir)
 
     # transfer to train, eval, and test
-    root = "/data/stympopper/FullTUEV/edf"
+    root = "/path/to/folder//FullTUEV/edf"
     seed = 4523
     np.random.seed(seed)
 

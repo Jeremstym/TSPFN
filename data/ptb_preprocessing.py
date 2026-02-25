@@ -101,7 +101,7 @@ def count_occurrences(a):
 
 if __name__ == "__main__":
 
-    path = "/data/stympopper/PTB/data/"
+    path = "/path/to/folder/PTB/data/"
     sampling_rate = 500
 
     # load and convert annotation data

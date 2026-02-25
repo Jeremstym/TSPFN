@@ -141,7 +141,7 @@ class TSPFNFineTuning(TSPFNSystem):
             )
         elif channel_handler == "labram":
             self.ts_tokenizer = TimeSeriesLabramEncoder(
-                pretrained_weights="/home/stympopper/pretrainingTSPFN/ckpts/labram-base.pth",
+                pretrained_weights="/path/to/folder/ckpts/labram-base.pth",
             )
         elif channel_handler == "average":
             self.ts_tokenizer = lambda x, input_chans: x.mean(dim=1)  # Average over channels

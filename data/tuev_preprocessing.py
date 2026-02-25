@@ -243,7 +243,7 @@ if __name__ == "__main__":
     TUEV dataset is downloaded from https://isip.piconepress.com/projects/tuh_eeg/html/downloads.shtml
     """
 
-    root = "/data/stympopper/TUEV/edf"
+    root = "/path/to/folder/TUEV/edf"
     train_out_dir = os.path.join(root, "fivechannels", "processed_train")
     eval_out_dir = os.path.join(root, "fivechannels", "processed_eval")
     if not os.path.exists(train_out_dir):
@@ -258,7 +258,7 @@ if __name__ == "__main__":
     load_up_objects(BaseDirEval, eval_out_dir)
 
     # transfer to train, eval, and test
-    root = "/data/stympopper/TUEV/edf/"
+    root = "/path/to/folder/TUEV/edf/"
     seed = 4523
     np.random.seed(seed)
 
@@ -295,8 +295,8 @@ if __name__ == "__main__":
             f"mv {os.path.join(root, 'fivechannels', 'processed_eval', file)} {target_test_dir}"
         )
 
-    # root = "/data/stympopper/TUEV/edf/processed"
-    # target_root = "/data/stympopper/tinyTUEV/processed"
+    # root = "/path/to/folder/TUEV/edf/processed"
+    # target_root = "/path/to/folder/tinyTUEV/processed"
 
     # # Select just 100 samples from trainset
     # train_files = os.listdir(os.path.join(root, "processed_train"))

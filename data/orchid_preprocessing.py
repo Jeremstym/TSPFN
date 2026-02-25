@@ -9,9 +9,9 @@ from tqdm import tqdm
 import yaml
 from sklearn.model_selection import train_test_split
 
-origin_path = "/data/stympopper/ORCHID/database"
-target_dir = "/data/stympopper/BenchmarkTSPFN/processed/ORCHID_processed/data"
-label_dir = "/data/stympopper/BenchmarkTSPFN/processed/ORCHID_processed"
+origin_path = "/path/to/folder/ORCHID/database"
+target_dir = "/path/to/folder/BenchmarkTSPFN/processed/ORCHID_processed/data"
+label_dir = "/path/to/folder/BenchmarkTSPFN/processed/ORCHID_processed"
 
 label_list = ["amyloidosis", "hta", "cmi", "CMD", "healthy"]
 label_map = {label: idx for idx, label in enumerate(label_list)}

@@ -96,7 +96,7 @@ class TimeSeriesLabramEncoder(torch.nn.Module):
 # if __name__ == "__main__":
 # transformerMEM = labram_base_patch200_1600_8k_vocab(
 #     pretrained=True,
-#     init_ckpt="/home/stympopper/pretrainingTSPFN/ckpts/labram-base.pth",
+#     init_ckpt="/path/to/folder/ckpts/labram-base.pth",
 #     init_values=0.1,
 # )
 # student = transformerMEM.student
@@ -108,7 +108,7 @@ class TimeSeriesLabramEncoder(torch.nn.Module):
 # print(f"token shape is {token_cls.shape}")
 #     model = vqnsp_encoder_base_decoder_3x200x12(
 #         pretrained=True,
-#         pretrained_weight="/home/stympopper/pretrainingTSPFN/ckpts/labram_vqnsp.pth",
+#         pretrained_weight="/path/to/folder/ckpts/labram_vqnsp.pth",
 #         as_tokenzer=True,
 #         EEG_size=1000,
 #         n_code=8192,

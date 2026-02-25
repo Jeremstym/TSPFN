@@ -7,9 +7,9 @@ from glob import glob
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
-ORIGIN_DIRECTORY = "/data/stympopper/HIRID/data"
+ORIGIN_DIRECTORY = "/path/to/folder/HIRID/data"
 OUTPUT_DIRECTORY = ORIGIN_DIRECTORY
-PATH_TO_LABELS = "/data/stympopper/HIRID/labels.csv"
+PATH_TO_LABELS = "/path/to/folder/HIRID/labels.csv"
 KEEP_5CHANNELS = ["patientid", "reldatetime", "vm1", "pm41", "vm5", "vm20", "vm62"]
 KEEP_4CHANNELS = ["patientid", "reldatetime", "vm1", "pm41", "vm5", "vm20", "vm62"]
 KEEP_3CHANNELS = ["patientid", "reldatetime", "vm1", "pm41", "vm5"]

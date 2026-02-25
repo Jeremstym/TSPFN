@@ -8,8 +8,8 @@ from sktime.datatypes import convert_to
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
-ORIGIN_DIRECTORY = "/data/stympopper/BenchmarkTSPFN/EOS/"
-OUTPUT_DIRECTORY = "/data/stympopper/BenchmarkTSPFN/processed/EyesOpenShut/"
+ORIGIN_DIRECTORY = "/path/to/folder/BenchmarkTSPFN/EOS/"
+OUTPUT_DIRECTORY = "/path/to/folder/BenchmarkTSPFN/processed/EyesOpenShut/"
 SPLIT_TRAIN = "train"
 SPLIT_TEST = "test"
 

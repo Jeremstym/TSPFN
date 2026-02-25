@@ -151,8 +151,8 @@ def count_occurrences(a):
 
 if __name__ == "__main__":
 
-    path = "/data/stympopper/CARDIOLOGY/cpsc_2018/"
-    path_data = "/data/stympopper/CARDIOLOGY/cpsc_2018/data/"
+    path = "/path/to/folder/cpsc_2018/"
+    path_data = "/path/to/folder/cpsc_2018/data/"
     # sampling_rate = 500
     resampled_rate = 200
 

@@ -6,11 +6,11 @@ import os
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
-FILTERED_FOLDER = "/data/stympopper/BenchmarkTSPFN/processed/EICU_preprocessed/filtered_multi_channel_ts"
-IMPUTED_FOLDER = "/data/stympopper/BenchmarkTSPFN/processed/EICU_preprocessed/imputed_multi_channel_ts"
-IMPUTED_FOLDER_decease = "/data/stympopper/BenchmarkTSPFN/processed/EICU_preprocessed/imputed_multi_channel_ts_decease"
-SPLIT_TRAIN = "/data/stympopper/BenchmarkTSPFN/processed/EICU_preprocessed/train_decease"
-SPLIT_TEST = "/data/stympopper/BenchmarkTSPFN/processed/EICU_preprocessed/test_decease"
+FILTERED_FOLDER = "/path/to/folder/BenchmarkTSPFN/processed/EICU_preprocessed/filtered_multi_channel_ts"
+IMPUTED_FOLDER = "/path/to/folder/BenchmarkTSPFN/processed/EICU_preprocessed/imputed_multi_channel_ts"
+IMPUTED_FOLDER_decease = "/path/to/folder/BenchmarkTSPFN/processed/EICU_preprocessed/imputed_multi_channel_ts_decease"
+SPLIT_TRAIN = "/path/to/folder/BenchmarkTSPFN/processed/EICU_preprocessed/train_decease"
+SPLIT_TEST = "/path/to/folder/BenchmarkTSPFN/processed/EICU_preprocessed/test_decease"
 
 
 def extract_multi_channel_vitals(min_valid_points=100):
@@ -18,7 +18,7 @@ def extract_multi_channel_vitals(min_valid_points=100):
     Processes vitalPeriodic once, aligns 5 channels, and skips low-quality stays.
     min_valid_points: Minimum non-NaN values required PER CHANNEL to save the patient.
     """
-    PATH_VITAL_PERIODIC = "/data/stympopper/BenchmarkTSPFN/EICU-CRD/vitalPeriodic.csv.gz"
+    PATH_VITAL_PERIODIC = "/path/to/folder/BenchmarkTSPFN/EICU-CRD/vitalPeriodic.csv.gz"
     DESTINATION_FOLDER = FILTERED_FOLDER
 
     CHANNELS = {"heartrate": 0, "respiration": 1, "sao2": 2, "systemicmean": 3, "temperature": 4}
@@ -339,9 +339,9 @@ if __name__ == "__main__":
     )
     create_final_labels(
         ts_folder=IMPUTED_FOLDER_decease,
-        patient_csv_path="/data/stympopper/BenchmarkTSPFN/EICU-CRD/patient.csv.gz",
-        output_path="/data/stympopper/BenchmarkTSPFN/processed/EICU_preprocessed/final_labels.csv",
+        patient_csv_path="/path/to/folder/BenchmarkTSPFN/EICU-CRD/patient.csv.gz",
+        output_path="/path/to/folder/BenchmarkTSPFN/processed/EICU_preprocessed/final_labels.csv",
     )
     split_train_val(
-        label_csv="/data/stympopper/BenchmarkTSPFN/processed/EICU_preprocessed/final_labels.csv", train_ratio=0.8
+        label_csv="/path/to/folder/BenchmarkTSPFN/processed/EICU_preprocessed/final_labels.csv", train_ratio=0.8
     )

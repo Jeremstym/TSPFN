@@ -1,2 +1,2 @@
 _target_: tspfn.foundationals.labram.TimeSeriesLabramEncoder
-pretrained_weights: "/home/stympopper/pretrainingTSPFN/ckpts/labram-base.pth"
+pretrained_weights: "path/to/folder/ckpts/labram-base.pth"

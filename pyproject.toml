@@ -2,10 +2,10 @@
 name = "tspfn"
 version = "0.1.0"
 description = "Pretraining Time-Series PFN models with incontext learning tasks and real world datasets"
-authors = ["Jérémie Stym-Popper <stympopper@isir.upmc.fr>"]
+authors = ["XXXX <xxxx@xxxxx>"]
 license = "Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/Jeremstym/pretrainingTSPFN"
+repository = "xxxxxx"
 classifiers=[
     "Environment :: Console",
     "Natural Language :: English",
