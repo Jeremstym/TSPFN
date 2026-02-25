@@ -9,7 +9,7 @@ This repo is made to pretrained a transformer PFN model on the model of TabPFN, 
 First, download the project's code:
 ```shell script
 # clone project
-git clone https://github.com/Jeremstym/pretrainingTSPFN.git
+git clone url
 ```
 
 Next you have to install the project and its dependencies. The project's dependency management and packaging is handled
@@ -43,16 +43,3 @@ You just have to list your ```.csv``` in [config data pretraining-csv.yaml](conf
 **Warning** 
 Insure that each dataset does not contain more than 10 labels !! As we follow the TabPFN architecture (v1) and download its weights, 
 we cannot afford more than 10 label classification for now.
-
-### Configuring a Run
-This project uses Hydra to handle the configuration of the
-[`tspfn` runner script](tspfn/runner.py). To understand how to use Hydra's CLI, refer to its
-[documentation](https://hydra.cc/docs/intro/). For this particular project, preset configurations for various parts of
-the `tspfn` runner pipeline are available in the [config package](config). These files are meant to be
-composed together by Hydra to produce a complete configuration for a run.
-
-Below we provide examples of how to run some basic commands using the Hydra CLI:
-```shell script
-# Manually set hydra.run.dir where the experience is run and where the output filed will be delivered
-tspfn-pretrain 'hydra.run.dir=/data/stympopper/TSPFN_BIGpretraining_v3' +experiment=pretrainingTSPFN/tspfn-pretraining seed=42
-````
