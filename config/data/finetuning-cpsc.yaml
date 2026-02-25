@@ -1,0 +1,12 @@
+defaults:
+  - default
+
+_target_: data.data_module.CPSCFineTuneDataModule
+data_roots: ${oc.env:CPSC_DATA_PATH}
+time_series_length: 125
+num_channels: 4
+num_classes: 4
+
+predict_losses:
+  classification:
+    _target_: torch.nn.CrossEntropyLoss

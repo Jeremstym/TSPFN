@@ -1,0 +1,13 @@
+defaults:
+  - default
+
+_target_: data.data_module.BlinkDataModule
+data_roots: ${oc.env:BLINK_DATA_PATH}
+time_series_length: 510
+time_points: null
+num_channels: null
+num_classes: 2
+
+predict_losses:
+  classification:
+    _target_: torch.nn.CrossEntropyLoss

@@ -1,0 +1,13 @@
+defaults:
+  - default
+
+_target_: data.data_module.ABIDEDataModule
+data_roots: ${oc.env:ABIDE_DATA_PATH}
+time_series_length: 124
+time_points: 124
+num_channels: 2
+num_classes: 2
+
+predict_losses:
+  classification:
+    _target_: torch.nn.BCEWithLogitsLoss

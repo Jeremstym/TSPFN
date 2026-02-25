@@ -1,0 +1,13 @@
+defaults:
+  - default
+
+_target_: data.data_module.ECG5000DataModule
+data_roots: ${oc.env:ECG5000_DATA_PATH}
+time_series_length: 140
+time_points: null
+num_channels: null
+num_classes: 5
+
+predict_losses:
+  classification:
+    _target_: torch.nn.CrossEntropyLoss

@@ -1,0 +1,12 @@
+defaults:
+  - default
+
+_target_: data.data_module.ESRDataModule
+data_roots: ${oc.env:ESR_DATA_PATH}
+time_series_length: 177
+num_channels: null
+num_classes: 5
+time_points: null
+predict_losses:
+  classification:
+    _target_: torch.nn.CrossEntropyLoss
