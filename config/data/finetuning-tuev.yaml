@@ -1,0 +1,13 @@
+defaults:
+  - default
+
+# _target_: data.data_module.FineTuneTUEVDataModule
+# _target_: data.data_module.StratifiedFineTuneTUEVDataModule
+_target_: data.data_module.FineTuneFilteredTUEVDataModule
+data_roots: ${oc.env:FilteredTUEV_DATA_PATH}
+# data_roots: ${oc.env:TinyTUEV_DATA_PATH}
+# data_roots: ${oc.env:TUEV_DATA_PATH}
+
+predict_losses:
+  classification:
+    _target_: torch.nn.CrossEntropyLoss

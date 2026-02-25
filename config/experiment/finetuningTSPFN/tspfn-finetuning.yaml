@@ -1,0 +1,91 @@
+# @package _global_
+
+defaults:
+  - /task/model/prediction_head: pfn-prediction
+  - /task/model/encoder: tspfn-encoder
+  # - /task/model/loc_head: channel-loc
+  - override /task/model: null
+  - override /task/optim: adamw
+  - override /data: evaluating-abide
+
+
+resume: False
+test: True
+trainer:
+  devices: ${sys.num_gpus:}
+  accelerator: gpu
+  precision: 32 #16-mixed, 32
+  max_epochs: 500
+  
+output_dir: ${sys.getcwd:}
+updated_pfn_path: null
+
+data:
+  batch_size: 64
+  test_batch_size: null # Defaults to all data in one batch
+  support_size: null # Number of samples to use for training in the support set (for few-shot learning). If null, use all available samples.
+  fold: null # If not null, use this fold for validation in evaluation datasets (0-4)
+  num_workers: 4 # try 4, 8, 16 depending on the system capabilities
+
+task:
+  _target_: tspfn.finetuning.tspfn_finetune.TSPFNFineTuning
+  embed_dim: 192 # As in TabPFN_v2 paper
+  time_series_num_channels: ${data.num_channels}
+  time_series_length: ${data.time_series_length}
+  num_classes: ${data.num_classes}
+  split_finetuning: 0.5
+  predict_losses: ${data.predict_losses}
+    # classification:
+    #   _target_: torch.nn.CrossEntropyLoss
+    # location:
+    #   _target_: torch.nn.BCEWithLogitsLoss
+  time_series_positional_encoding: none
+  channel_handler: null
+  seed : ${seed}
+  max_batches_stored_for_inference: 256
+  model:
+    freeze_encoder: False # Whether to freeze the TabPFN encoder during training
+    # loc_head: null
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+      lr: 1e-4
+      weight_decay: 1e-5
+    scheduler:
+      _target_: transformers.get_linear_schedule_with_warmup
+      num_warmup_steps: 0.1
+
+
+# Change checkpoint loading defaults to:
+ckpt: ??? # Make it mandatory to provide a checkpoint
+weights_only: True  # Only load the weights and ignore the hyperparameters
+strict: True # Only load weights where they match the defined network, to only some changes (e.g. heads, etc.)
+
+
+experiment_dirname: data=${hydra:runtime.choices.task/data}/contrastive=${oc.select:task.contrastive_loss_weight,0}/time_series_tokenizer=${hydra:runtime.choices.task/time_series_tokenizer/model}
+hydra:
+  job:
+    config:
+      override_dirname:
+        exclude_keys:
+          - hydra/launcher
+          - hydra.launcher.n_jobs
+          - hydra.run.dir
+          - hydra.sweep.dir
+          - hydra.sweep.subdir
+
+          - experiment
+          - trainer.enable_progress_bar
+          - trainer.max_epochs
+
+          - callbacks.learning_rate_finder
+
+          - ckpt
+
+          - data
+          - task.predict_losses
+
+          - task.embed_dim
+          - task/time_series_tokenizer/model
+
+          - task/model/encoder

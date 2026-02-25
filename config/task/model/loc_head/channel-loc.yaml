@@ -1,0 +1,6 @@
+_target_: tspfn.architecture.loc_head.ChannelLocalizationHead
+input_dim: 192  # Should match the encoder output dimension
+hidden_dim: 128
+num_layers: 2
+dropout: 0.1
+num_locations: 16  # Number of discrete locations to predict

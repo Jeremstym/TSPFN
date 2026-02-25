@@ -1,0 +1,154 @@
+defaults:
+  - default
+
+_target_: data.data_module.PretrainingTSPFNDataModule
+train_datasets:
+  2ChannelHIRID:
+    _target_: data.pretraining_datasets.HIRID2ChannelDataset
+    root: ${oc.env:TWOCHANS_HIRID_DATA_PATH}
+    split: train
+  3ChannelHIRID:
+    _target_: data.pretraining_datasets.HIRID3ChannelDataset
+    root: ${oc.env:THREECHANS_HIRID_DATA_PATH}
+    split: train
+  4ChannelHIRID:
+    _target_: data.pretraining_datasets.HIRID4ChannelDataset
+    root: ${oc.env:FOURCHANS_HIRID_DATA_PATH}
+    split: train
+  5ChannelHIRID:
+    _target_: data.pretraining_datasets.HIRID5ChannelDataset
+    root: ${oc.env:FIVECHANS_HIRID_DATA_PATH}
+    split: train
+  2ChannelTUAB:
+    _target_: data.pretraining_datasets.TUAB2ChannelDataset
+    root: ${oc.env:TWOCHANS_TUAB_DATA_PATH}
+    split: train
+  2ChannelTUEV:
+    _target_: data.pretraining_datasets.TUEV2ChannelDataset
+    root: ${oc.env:TWOCHANS_TUEV_DATA_PATH}
+    split: train
+  2ChannelPTB:
+    _target_: data.pretraining_datasets.PTB2ChannelDataset
+    root: ${oc.env:TWOCHANS_PTB_DATA_PATH}
+    split: train
+  3ChannelTUAB:
+    _target_: data.pretraining_datasets.TUAB3ChannelDataset
+    root: ${oc.env:THREECHANS_TUAB_DATA_PATH}
+    split: train
+  3ChannelTUEV:
+    _target_: data.pretraining_datasets.TUEV3ChannelDataset
+    root: ${oc.env:THREECHANS_TUEV_DATA_PATH}
+    split: train
+  3ChannelPTB:
+    _target_: data.pretraining_datasets.PTB3ChannelDataset
+    root: ${oc.env:THREECHANS_PTB_DATA_PATH}
+    split: train
+  4ChannelTUAB:
+    _target_: data.pretraining_datasets.TUAB4ChannelDataset 
+    root: ${oc.env:FOURCHANS_TUAB_DATA_PATH}
+    split: train
+  4ChannelTUEV:
+    _target_: data.pretraining_datasets.TUEV4ChannelDataset
+    root: ${oc.env:FOURCHANS_TUEV_DATA_PATH}
+    split: train
+  4ChannelPTB:
+    _target_: data.pretraining_datasets.PTB4ChannelDataset
+    root: ${oc.env:FOURCHANS_PTB_DATA_PATH}
+    split: train
+  5ChannelTUAB:
+    _target_: data.pretraining_datasets.TUAB5ChannelDataset 
+    root: ${oc.env:FIVECHANS_TUAB_DATA_PATH}
+    split: train
+  5ChannelTUEV:
+    _target_: data.pretraining_datasets.TUEV5ChannelDataset
+    root: ${oc.env:FIVECHANS_TUEV_DATA_PATH}
+    split: train
+  5ChannelPTB:
+    _target_: data.pretraining_datasets.PTB5ChannelDataset
+    root: ${oc.env:FIVECHANS_PTB_DATA_PATH}
+    split: train
+val_datasets:
+  2ChannelHIRID:
+    _target_: data.pretraining_datasets.HIRID2ChannelDataset
+    root: ${oc.env:TWOCHANS_HIRID_DATA_PATH}
+    split: val
+  3ChannelHIRID:
+    _target_: data.pretraining_datasets.HIRID3ChannelDataset
+    root: ${oc.env:THREECHANS_HIRID_DATA_PATH}
+    split: val
+  4ChannelHIRID:
+    _target_: data.pretraining_datasets.HIRID4ChannelDataset
+    root: ${oc.env:FOURCHANS_HIRID_DATA_PATH}
+    split: val
+  5ChannelHIRID:
+    _target_: data.pretraining_datasets.HIRID5ChannelDataset
+    root: ${oc.env:FIVECHANS_HIRID_DATA_PATH}
+    split: val
+  2ChannelTUAB:
+    _target_: data.pretraining_datasets.TUAB2ChannelDataset
+    root: ${oc.env:TWOCHANS_TUAB_DATA_PATH}
+    split: val
+  2ChannelTUEV:
+    _target_: data.pretraining_datasets.TUEV2ChannelDataset
+    root: ${oc.env:TWOCHANS_TUEV_DATA_PATH}
+    split: val
+  2ChannelPTB:
+    _target_: data.pretraining_datasets.PTB2ChannelDataset
+    root: ${oc.env:TWOCHANS_PTB_DATA_PATH}
+    split: val
+  3ChannelTUAB:
+    _target_: data.pretraining_datasets.TUAB3ChannelDataset
+    root: ${oc.env:THREECHANS_TUAB_DATA_PATH}
+    split: val
+  3ChannelTUEV:
+    _target_: data.pretraining_datasets.TUEV3ChannelDataset
+    root: ${oc.env:THREECHANS_TUEV_DATA_PATH}
+    split: val
+  3ChannelPTB:
+    _target_: data.pretraining_datasets.PTB3ChannelDataset
+    root: ${oc.env:THREECHANS_PTB_DATA_PATH}
+    split: val
+  4ChannelTUAB:
+    _target_: data.pretraining_datasets.TUAB4ChannelDataset 
+    root: ${oc.env:FOURCHANS_TUAB_DATA_PATH}
+    split: val
+  4ChannelTUEV:
+    _target_: data.pretraining_datasets.TUEV4ChannelDataset
+    root: ${oc.env:FOURCHANS_TUEV_DATA_PATH}
+    split: val
+  4ChannelPTB:
+    _target_: data.pretraining_datasets.PTB4ChannelDataset
+    root: ${oc.env:FOURCHANS_PTB_DATA_PATH}
+    split: val
+  5ChannelTUAB:
+    _target_: data.pretraining_datasets.TUAB5ChannelDataset 
+    root: ${oc.env:FIVECHANS_TUAB_DATA_PATH}
+    split: val
+  5ChannelTUEV:
+    _target_: data.pretraining_datasets.TUEV5ChannelDataset
+    root: ${oc.env:FIVECHANS_TUEV_DATA_PATH}
+    split: val
+  5ChannelPTB:
+    _target_: data.pretraining_datasets.PTB5ChannelDataset
+    root: ${oc.env:FIVECHANS_PTB_DATA_PATH}
+    split: val
+
+# test_datasets:
+#   2ChannelTUAB:
+#     _target_: data.pretraining_datasets.TUAB2ChannelDataset
+#     root: ${oc.env:TWOCHANS_TUAB_DATA_PATH}
+#     split: test
+#   2ChannelTUEV:
+#     _target_: data.pretraining_datasets.TUEV2ChannelDataset
+#     root: ${oc.env:TWOCHANS_TUEV_DATA_PATH}
+#     split: test
+#   2ChannelPTB:
+#     _target_: data.pretraining_datasets.PTB2ChannelDataset
+#     root: ${oc.env:TWOCHANS_PTB_DATA_PATH}
+#     split: test
+meta_batch_size: 1
+chunk_size: 5000
+num_workers: 4
+num_channels: null
+sequence_length: ${data.chunk_size} # For the TSPFN encoder, the sequence length is determined by the chunk size (number of time points per chunk)
+time_points: null # Number of time points in the input time series data (excluding the class token)

@@ -1,0 +1,96 @@
+# @package _global_
+
+defaults:
+  # - /task/time_series_tokenizer/model: transformer
+  # - /task/data/preprocessors: tabpfn-ensemble-config
+  # - /task/model/contrastive_head: mlp
+  # - /task/model/fusion_module: dafted-fusion
+  # - /task/model/fusion_module: null
+  # - /task/model/ts_encoder: time-series-pfn-encoder
+  # - /task/model/prediction_head@task.model.ordinal_head: unimodal-logits
+  - /task/model/prediction_head: pfn-prediction-pretraining
+  - /task/model/encoder: tspfn-encoder
+  - override /task/model: null
+  - override /task/optim: adamw
+  - override /data: pretraining-csv
+
+
+resume: False
+test: True
+trainer:
+  devices: ${sys.num_gpus:}
+  accelerator: gpu
+  precision: 32 #16-mixed, 32
+  max_epochs: 500
+  
+output_dir: ${sys.getcwd:}
+updated_pfn_path: null
+
+data:
+  batch_size: 1
+
+task:
+  _target_: tspfn.pretraining.tspfn_module.TSPFNPretraining
+  embed_dim: 192 # 192 for V2, 512 for V2.5
+  num_classes: 10 # As in TabPFN_v2 paper
+  split_finetuning: 0.5
+  predict_losses:
+    classification:
+      _target_: torch.nn.CrossEntropyLoss
+  time_series_positional_encoding: none
+  seed : ${seed}
+  model:
+    freeze_encoder: False # Whether to freeze the TabPFN encoder during training
+  # Default to the light finetuning describe in XTab's paper
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+      lr: 5e-5              # Slightly higher than single-set tuning, but still cautious
+      weight_decay: 0.1     # Stronger decay is essential for multi-dataset meta-learning
+      eps: 1e-8
+    scheduler:
+      _target_: transformers.get_cosine_schedule_with_warmup
+      num_warmup_steps: 1000 # Warmup should be step-based, not epoch-based
+  # optim:
+  #   optimizer:
+  #     _target_: torch.optim.AdamW
+  #     lr: 2e-5              # Lowered: 1e-4 is often too aggressive for ICL models
+  #     weight_decay: 0.05    # Increased: Helps prevent overfitting on small tabular sets
+  #     betas: [0.9, 0.98]    # Transformer standard
+  #   scheduler:
+  #     _target_: transformers.get_cosine_schedule_with_warmup
+  #     num_warmup_steps: 0.05 # Reduced warmup: You want to spend more time in the "stable" zone
+
+# Change checkpoint loading defaults to:
+ckpt: ??? # Make it mandatory to provide a checkpoint
+weights_only: True  # Only load the weights and ignore the hyperparameters
+strict: True # Only load weights where they match the defined network, to only some changes (e.g. heads, etc.)
+
+
+experiment_dirname: data=${hydra:runtime.choices.task/data}/contrastive=${oc.select:task.contrastive_loss_weight,0}/time_series_tokenizer=${hydra:runtime.choices.task/time_series_tokenizer/model}
+hydra:
+  job:
+    config:
+      override_dirname:
+        exclude_keys:
+          - hydra/launcher
+          - hydra.launcher.n_jobs
+          - hydra.run.dir
+          - hydra.sweep.dir
+          - hydra.sweep.subdir
+
+          - experiment
+          - trainer.enable_progress_bar
+          - trainer.max_epochs
+
+          - callbacks.learning_rate_finder
+
+          - ckpt
+
+          - data
+          - task.predict_losses
+
+          - task.embed_dim
+          - task/time_series_tokenizer/model
+
+          - task/model/encoder

@@ -1,0 +1,12 @@
+defaults:
+  - default
+
+_target_: data.data_module.ECG5000FineTuneDataModule
+data_roots: ${oc.env:ECG5000_DATA_PATH}
+time_series_length: 140
+num_channels: 1
+num_classes: 5
+
+predict_losses:
+  classification:
+    _target_: torch.nn.CrossEntropyLoss
