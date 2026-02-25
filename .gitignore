@@ -1,0 +1,8 @@
+# Remove script file
+*.sh
+
+# Remove diagrams
+/diagrams/
+
+# Remove unnecessary files
+*.DS_Store
