@@ -1,0 +1,296 @@
+import logging
+import os
+import random
+from abc import ABC
+from argparse import Namespace
+from pathlib import Path
+from shutil import copy2
+from typing import Union
+
+import comet_ml  # noqa
+import hydra
+import numpy as np
+import torch
+import omegaconf
+import typing
+import collections
+from tspfn.pretraining.tspfn_module import TSPFNPretraining
+from tspfn.finetuning.tspfn_finetune import TSPFNFineTuning
+from data.data_module import TSPFNDataModule
+from data.utils.config import register_omegaconf_resolvers, instantiate_config_node_leaves
+from data.utils.saving import resolve_model_checkpoint_path
+
+from dotenv import load_dotenv
+from hydra.core.hydra_config import HydraConfig
+from omegaconf import DictConfig, open_dict
+from pytorch_lightning import Trainer, seed_everything
+from pytorch_lightning.loggers import CometLogger, Logger
+import pytorch_lightning as pl
+
+logger = logging.getLogger(__name__)
+
+
+class TSPFNRunner(ABC):
+    """Abstract runner that runs the main training/val loop, etc. using Lightning Trainer."""
+
+    @classmethod
+    def main(cls) -> None:
+        """Runs the requested experiment."""
+        # Set up the environment
+        cls.pre_run_routine()
+
+        # Run the system with config loaded by @hydra.main
+        cls.run_system()
+
+    @classmethod
+    def pre_run_routine(cls) -> None:
+        """Sets-up the environment before running the training/testing."""
+        # Load environment variables from `.env` file if it exists
+        # Load before hydra main to allow for setting environment variables with ${oc.env:ENV_NAME}
+        load_dotenv()
+
+        register_omegaconf_resolvers()
+
+    @staticmethod
+    @hydra.main(version_base=None, config_path="../config", config_name="default")
+    def run_system(cfg: DictConfig) -> None:
+        """Handles the training and evaluation of a model.
+
+        Note: Must be static because of the hydra.main decorator and config pass-through.
+
+        Args:
+            cfg: Configuration to run the experiment.
+        """
+        cfg = TSPFNRunner._check_cfg(cfg)
+
+        # Global torch config making it possible to use performant matrix multiplications on Ampere and newer CUDA GPUs
+        # `dataprocessing` default value of is `high`, the middle-ground between performance and precision. For more details:
+        # https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+        torch.set_float32_matmul_precision(cfg.float32_matmul_precision)
+        torch.serialization.add_safe_globals(
+            [
+                omegaconf.dictconfig.DictConfig,
+                omegaconf.listconfig.ListConfig,
+                omegaconf.nodes.AnyNode,
+                typing.Any,
+                collections.OrderedDict,
+                collections.defaultdict,
+                dict,
+                list,
+                tuple,
+                set,
+                omegaconf.base.ContainerMetadata,
+                omegaconf.base.Metadata,
+            ]
+        )
+
+        if cfg.ckpt:
+            ckpt_path = resolve_model_checkpoint_path(cfg.ckpt)
+
+        if job_num := HydraConfig.get().job.get("num") and cfg.seed is None:
+            # If Hydra is in multirun mode and no seed is specified by the user (meaning we don't want to reproduce a
+            # previous experiment and only care about "true" randomness), use the job number as part of the seed to make
+            # sure to get a different seed for each job.
+            # This is a patch from Nathan Painchaud (nathan.painchaud@usherbrooke.ca) in
+            # "Fusing Echocardiography Images and Medical Records for Continuous Patient Stratification" (TUFFC, 2024).
+
+            # The seed is generated under the conditions that:
+            # i) it is different for each trial (make sure that even if the same initial seed is returned by `randint`,
+            #    the seed will be different for each job)
+            # ii) it is within the range of values accepted by numpy [np.iinfo(np.uint32).min, np.iinfo(np.uint32).max]
+            s_min, s_max = np.iinfo(np.uint32).min, np.iinfo(np.uint32).max
+            seed = random.randint(s_min, s_max)
+            cfg.seed = ((seed + job_num) % (s_max - s_min)) + s_min
+
+        cfg.seed = seed_everything(cfg.seed, workers=True)
+        experiment_logger = TSPFNRunner.configure_logger(cfg)
+
+        # Instantiate the different types of callbacks from the configs
+        callbacks = []
+        if isinstance(callbacks_node := cfg.get("callbacks"), DictConfig):
+            callbacks.extend(instantiate_config_node_leaves(callbacks_node, "callback"))
+
+        # if isinstance(trainer.logger, CometLogger):
+        #     experiment_logger.experiment.log_asset_folder(".hydra", log_file_name=True)
+        #     if cfg.get("comet_tags", None):
+        #         experiment_logger.experiment.add_tags(list(cfg.comet_tags))
+
+        # Instantiate datamodule
+        datamodule: TSPFNDataModule = hydra.utils.instantiate(cfg.data, _recursive_=False)
+
+        # while True:
+        #     # Instantiate Lightning Trainer
+        #     trainer: Trainer = hydra.utils.instantiate(cfg.trainer, logger=experiment_logger, callbacks=callbacks)
+        #     trainer.logger.log_hyperparams(Namespace(**cfg))  # Save config to logger.
+
+        #     # Instantiate system (which will handle instantiating the model and optimizer).
+        #     model: TSPFNPretraining = hydra.utils.instantiate(cfg.task, choices=None, _recursive_=False)
+
+        #     datamodule.setup()
+        #     if cfg.train:
+        #         trainer.fit(model, datamodule=datamodule)
+        #         # Copy best model checkpoint to a predictable path + online tracker (if used)
+        #         # Ensure we use the best weights (and not the latest ones) by loading back the best model
+        #         model = model.load_from_checkpoint(trainer.checkpoint_callback.best_model_path)
+        #         torch.save(model.encoder.state_dict(), cfg.output_dir + "/tspfn_encoder_weights.pt")
+        #         cfg.updated_pfn_path = cfg.output_dir + "/tspfn_encoder_weights.pt"
+        #         print(f"Best model checkpoint saved at {trainer.checkpoint_callback.best_model_path}")
+        #     if cfg.test:
+        #         trainer.test(model, datamodule=datamodule)
+        #     if not datamodule.switch_to_next_dataset():
+        #         break
+        # Instantiate Lightning Trainer
+        trainer: Trainer = hydra.utils.instantiate(cfg.trainer, logger=experiment_logger, callbacks=callbacks)
+        trainer.logger.log_hyperparams(Namespace(**cfg))  # Save config to logger.
+
+        # profiler = hydra.utils.instantiate(cfg.profiler)
+        # trainer_args = dict(cfg.trainer)
+        # trainer_args.pop("profiler", None)
+
+        # trainer = pl.Trainer(
+        #     devices=1,
+        #     accelerator="gpu",
+        #     precision=32,
+        #     max_epochs=100,
+        #     profiler=profiler
+        # )
+
+        # Instantiate system (which will handle instantiating the model and optimizer).
+        model = hydra.utils.instantiate(cfg.task, choices=None, _recursive_=False)
+
+        if cfg.ckpt:  # Load pretrained model if checkpoint is provided
+            if cfg.weights_only:
+                logger.info(f"Loading weights from {ckpt_path}")
+                model.load_state_dict(
+                    torch.load(ckpt_path, map_location=model.device, weights_only=cfg.weights_only)["state_dict"],
+                    strict=cfg.strict,
+                )
+            #         modelkeys = list(model.state_dict().keys())
+            #         loadkeys = list(torch.load(ckpt_path, map_location=model.device)["state_dict"].keys())
+            #         commonkeys = list(set(modelkeys).intersection(loadkeys))
+            #         print(commonkeys)
+            else:
+                logger.info(f"Loading model from {ckpt_path}")
+                model = model.load_from_checkpoint(ckpt_path, strict=cfg.strict)
+
+        # datamodule.setup() # Do not setup twice, already done in the datamodule init
+
+        # Print output dir
+        logger.info(f"Saving results in: {trainer.logger.log_dir}")
+
+        if isinstance(model, TSPFNPretraining):
+            if cfg.train:
+                if cfg.resume:
+                    assert cfg.ckpt is not None, "To resume training, a checkpoint path must be provided in cfg.ckpt"
+                    trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
+                else:
+                    trainer.fit(model, datamodule=datamodule)
+                # Copy best model checkpoint to a predictable path + online tracker (if used)
+                # Ensure we use the best weights (and not the latest ones) by loading back the best model
+                model = model.load_from_checkpoint(trainer.checkpoint_callback.best_model_path)
+                torch.save(model.encoder.state_dict(), cfg.output_dir + "/tspfn_encoder_weights.pt")
+                cfg.updated_pfn_path = cfg.output_dir + "/tspfn_encoder_weights.pt"
+                print(f"Best model checkpoint saved at {trainer.checkpoint_callback.best_model_path}")
+            if cfg.test:
+                trainer.test(model, datamodule=datamodule)
+        elif isinstance(model, TSPFNFineTuning):
+            if cfg.train:
+                if cfg.resume:
+                    assert cfg.ckpt is not None, "To resume training, a checkpoint path must be provided in cfg.ckpt"
+                    trainer.fit(model, datamodule=datamodule, ckpt_path=ckpt_path)
+                else:
+                    trainer.fit(model, datamodule=datamodule)
+                # Copy best model checkpoint to a predictable path + online tracker (if used)
+                # Ensure we use the best weights (and not the latest ones) by loading back the best model
+                best_model_path = trainer.checkpoint_callback.best_model_path
+                print(f"Best model checkpoint saved at {best_model_path}")
+                model = model.load_from_checkpoint(best_model_path)
+                if cfg.use_last:
+                    last_model_path = trainer.checkpoint_callback.last_model_path
+                    print(f"Last model checkpoint saved at {last_model_path}")
+                    model = model.load_from_checkpoint(last_model_path)
+            if cfg.test:
+                trainer.test(model, datamodule=datamodule)
+        else:
+            if cfg.train:
+                trainer.fit(model, datamodule=datamodule)
+            if cfg.test:
+                trainer.test(model, datamodule=datamodule)
+
+    @staticmethod
+    def _check_cfg(cfg: DictConfig) -> DictConfig:
+        """Parse args, making custom checks on the values of the parameters in the process.
+
+        Args:
+            cfg: Full configuration for the experiment.
+
+        Returns:
+             Validated config for a system run.
+        """
+        # If no output dir is specified, default to the working directory
+        if not cfg.trainer.get("default_root_dir", None):
+            with open_dict(cfg):
+                cfg.trainer.default_root_dir = os.getcwd()
+
+        return cfg
+
+    @staticmethod
+    def configure_logger(cfg: DictConfig) -> Union[bool, Logger]:
+        """Initializes Lightning logger.
+
+        Args:
+            cfg: Full configuration for the experiment.
+
+        Returns:
+            Logger for the Lightning Trainer.
+        """
+        experiment_logger = True  # Default to True (Tensorboard)
+        skip_logger = False
+        # Configure custom logger only if user specified custom config
+        if "logger" in cfg and isinstance(cfg.logger, DictConfig):
+            if "_target_" not in cfg.logger:
+                logger.warning("No _target_ in logger config. Cannot instantiate custom logger")
+                skip_logger = True
+            if cfg.trainer.get("fast_dev_run", False):
+                logger.warning(
+                    "Not instantiating custom logger because having `fast_dev_run=True` makes Lightning skip logging. "
+                    "To test the logger, launch a full run."
+                )
+                skip_logger = True
+            if not skip_logger and "_target_" in cfg.logger:
+                if "comet" in cfg.logger._target_:
+                    experiment_logger = hydra.utils.instantiate(cfg.logger)
+                elif "tensorboard" in cfg.logger._target_:
+                    # If no save_dir is passed, use default logger and let Trainer set save_dir.
+                    if cfg.logger.get("save_dir", None):
+                        experiment_logger = hydra.utils.instantiate(cfg.logger)
+        return experiment_logger
+
+    @staticmethod
+    def _best_model_path(log_dir: Path, cfg: DictConfig) -> Path:
+        """Defines the path where to copy the best model checkpoint after training.
+
+        Args:
+            log_dir: Lightning's directory for the current run.
+            cfg: Full configuration for the experiment.
+
+        Returns:
+            Path where to copy the best model checkpoint after training.
+        """
+        if cfg.get("best_model_save_path", None):
+            return Path(cfg.best_model_save_path)  # Return save path from config if available
+        else:
+            model = cfg.choices["task/model"]
+            name = f"{cfg.choices.data}_{cfg.choices.task}"
+            if model is not None:  # Some systems do not have a model (ex. Auto-encoders)
+                name = f"{name}_{model}"
+            return log_dir / f"{name}.ckpt"
+
+
+def main():
+    """Run the script."""
+    TSPFNRunner.main()
+
+
+if __name__ == "__main__":
+    main()
