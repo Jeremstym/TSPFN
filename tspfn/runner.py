@@ -88,11 +88,6 @@ class TSPFNRunner(ABC):
             ckpt_path = resolve_model_checkpoint_path(cfg.ckpt)
 
         if job_num := HydraConfig.get().job.get("num") and cfg.seed is None:
-            # If Hydra is in multirun mode and no seed is specified by the user (meaning we don't want to reproduce a
-            # previous experiment and only care about "true" randomness), use the job number as part of the seed to make
-            # sure to get a different seed for each job.
-            # This is a patch from Nathan Painchaud (nathan.painchaud@usherbrooke.ca) in
-            # "Fusing Echocardiography Images and Medical Records for Continuous Patient Stratification" (TUFFC, 2024).
 
             # The seed is generated under the conditions that:
             # i) it is different for each trial (make sure that even if the same initial seed is returned by `randint`,
@@ -110,50 +105,13 @@ class TSPFNRunner(ABC):
         if isinstance(callbacks_node := cfg.get("callbacks"), DictConfig):
             callbacks.extend(instantiate_config_node_leaves(callbacks_node, "callback"))
 
-        # if isinstance(trainer.logger, CometLogger):
-        #     experiment_logger.experiment.log_asset_folder(".hydra", log_file_name=True)
-        #     if cfg.get("comet_tags", None):
-        #         experiment_logger.experiment.add_tags(list(cfg.comet_tags))
-
         # Instantiate datamodule
         datamodule: TSPFNDataModule = hydra.utils.instantiate(cfg.data, _recursive_=False)
 
-        # while True:
-        #     # Instantiate Lightning Trainer
-        #     trainer: Trainer = hydra.utils.instantiate(cfg.trainer, logger=experiment_logger, callbacks=callbacks)
-        #     trainer.logger.log_hyperparams(Namespace(**cfg))  # Save config to logger.
-
-        #     # Instantiate system (which will handle instantiating the model and optimizer).
-        #     model: TSPFNPretraining = hydra.utils.instantiate(cfg.task, choices=None, _recursive_=False)
-
-        #     datamodule.setup()
-        #     if cfg.train:
-        #         trainer.fit(model, datamodule=datamodule)
-        #         # Copy best model checkpoint to a predictable path + online tracker (if used)
-        #         # Ensure we use the best weights (and not the latest ones) by loading back the best model
-        #         model = model.load_from_checkpoint(trainer.checkpoint_callback.best_model_path)
-        #         torch.save(model.encoder.state_dict(), cfg.output_dir + "/tspfn_encoder_weights.pt")
-        #         cfg.updated_pfn_path = cfg.output_dir + "/tspfn_encoder_weights.pt"
-        #         print(f"Best model checkpoint saved at {trainer.checkpoint_callback.best_model_path}")
-        #     if cfg.test:
-        #         trainer.test(model, datamodule=datamodule)
-        #     if not datamodule.switch_to_next_dataset():
-        #         break
         # Instantiate Lightning Trainer
         trainer: Trainer = hydra.utils.instantiate(cfg.trainer, logger=experiment_logger, callbacks=callbacks)
         trainer.logger.log_hyperparams(Namespace(**cfg))  # Save config to logger.
 
-        # profiler = hydra.utils.instantiate(cfg.profiler)
-        # trainer_args = dict(cfg.trainer)
-        # trainer_args.pop("profiler", None)
-
-        # trainer = pl.Trainer(
-        #     devices=1,
-        #     accelerator="gpu",
-        #     precision=32,
-        #     max_epochs=100,
-        #     profiler=profiler
-        # )
 
         # Instantiate system (which will handle instantiating the model and optimizer).
         model = hydra.utils.instantiate(cfg.task, choices=None, _recursive_=False)
@@ -165,15 +123,10 @@ class TSPFNRunner(ABC):
                     torch.load(ckpt_path, map_location=model.device, weights_only=cfg.weights_only)["state_dict"],
                     strict=cfg.strict,
                 )
-            #         modelkeys = list(model.state_dict().keys())
-            #         loadkeys = list(torch.load(ckpt_path, map_location=model.device)["state_dict"].keys())
-            #         commonkeys = list(set(modelkeys).intersection(loadkeys))
-            #         print(commonkeys)
             else:
                 logger.info(f"Loading model from {ckpt_path}")
                 model = model.load_from_checkpoint(ckpt_path, strict=cfg.strict)
 
-        # datamodule.setup() # Do not setup twice, already done in the datamodule init
 
         # Print output dir
         logger.info(f"Saving results in: {trainer.logger.log_dir}")
