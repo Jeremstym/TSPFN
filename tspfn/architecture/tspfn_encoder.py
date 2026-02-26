@@ -62,6 +62,9 @@ class TSPFNEncoder(nn.Module, ABC):
         self.transformer_encoder = self.model.transformer_encoder
         self.features_per_group = features_per_group  # 1 for TabPFN v2, 3 for TabPFN v2.5
         self.recompute_layer = recompute_layer
+
+        # Use time points and num channels as placeholder. They will be updated dynamically 
+        # in the forward pass based on the input data dimensions
         self.num_channels = num_channels
         self.time_points = time_points
         self.positional_encoding = positional_encoding
