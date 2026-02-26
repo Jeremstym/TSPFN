@@ -39,13 +39,6 @@ class PFNPredictionHead(nn.Module):
         if updated_pfn_path is not None:
             # Load updated model weights after pretraining
             state_dict = torch.load(updated_pfn_path, map_location="cuda:0")
-            # new_state_dict = {}
-            # for k, v in state_dict.items():
-            #     if k.startswith("model."):
-            #         new_key = k[len("model.") :]  # strip the prefix
-            #         new_state_dict[new_key] = v
-            #     else:
-            #         new_state_dict[k] = v
             if "pe" in state_dict:
                 state_dict.pop("pe")  # Remove pe if present
             if "channel_positional_encoding" in state_dict:
@@ -66,7 +59,6 @@ class PFNPredictionHead(nn.Module):
             - (N, `out_features`), Batch of output features.
         """
         x = self.head(x.unsqueeze(1)).squeeze(1)
-        # x = x[:, :n_class]  # Original TabPFN prediction head outputs 10 classes by default, reduce to n_class
         x = x[:, :, :self.n_classes]  # Original TabPFN prediction head outputs 10 classes by default, reduce to n_class
 
         return x

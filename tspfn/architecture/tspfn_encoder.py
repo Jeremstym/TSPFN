@@ -34,10 +34,6 @@ class TSPFNEncoder(nn.Module, ABC):
         super().__init__()
 
         self.channel_positional_encoding = nn.Parameter(torch.zeros(1, 5, 1, embed_dim)) # Leave 5 hardcoded
-        # if positional_encoding == "learned":
-        #     self.pe = nn.Parameter(torch.zeros(1, 1, 500, embed_dim)) # Leave 500 hardcoded
-        #     nn.init.xavier_uniform_(self.pe)
-        # if positional_encoding == "cwpe" or positional_encoding == "cwpe+rope":
         self.cwpe = nn.Embedding(5, embed_dim)
         nn.init.normal_(self.cwpe.weight, mean=0, std=embed_dim**-0.5)
 
@@ -88,10 +84,6 @@ class TSPFNEncoder(nn.Module, ABC):
             for layer in self.transformer_encoder.layers:
                 layer.self_attn_between_features.is_feature_attn = True
                 layer.self_attn_between_items.is_feature_attn = False
-            # for layer in self.transformer_encoder.layers:
-            #     layer.self_attn_between_features.compute_attention_heads = partial(
-            #         rope_compute_heads_wrapper, num_channels=self.num_channels
-            #     )
 
         elif self.positional_encoding == "cwpe+rope":
             # Modify attention mechanism to include RoPE with channel-wise application
@@ -106,10 +98,6 @@ class TSPFNEncoder(nn.Module, ABC):
             for layer in self.transformer_encoder.layers:
                 layer.self_attn_between_features.is_feature_attn = True
                 layer.self_attn_between_items.is_feature_attn = False
-            # for layer in self.transformer_encoder.layers:
-            #     layer.self_attn_between_features.compute_attention_heads = partial(
-            #         rope_compute_heads_wrapper, num_channels=self.num_channels
-            #     )
 
 
         if random_init:  # random_init:
@@ -247,17 +235,6 @@ class TSPFNEncoder(nn.Module, ABC):
                 channel_pe = channel_pe.repeat(1, 1, num_channels // 5 + 1, 1, 1)[:, :, :num_channels, :, :]  # (1, 1, C, 1, E)
             emb_x = emb_x + channel_pe  # Broadcast addition to (B, Seq, C, L, E) + (1, 1, C, 1, E)
             emb_x = emb_x.view(batch_size, seq_len, num_channels * num_features, self.embed_dim)  # (B, Seq, C*L, E)
-            # if self.channel_positional_encoding is not None:
-            #     if self.channel_positional_encoding.shape[2] != num_features:
-            #         # Interpolate channel positional encoding if number of features differs
-            #         self.channel_positional_encoding = nn.Parameter(
-            #             interpolate_pos_encoding(self.channel_positional_encoding, new_len=num_features)
-            #         )
-            #     # Broadcast to (B, Seq, num_features, E)
-            #     channel_pe_broadcasted = self.channel_positional_encoding.expand(
-            #         batch_size, seq_len, num_features, self.embed_dim
-            #     )
-            #     emb_x += channel_pe_broadcasted
 
         elif self.positional_encoding == "sinusoidal":
             # Add sinusoidal positional encodings to time series attributes
