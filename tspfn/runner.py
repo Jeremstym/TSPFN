@@ -15,7 +15,7 @@ import omegaconf
 import typing
 import collections
 from tspfn.pretraining.tspfn_module import TSPFNPretraining
-from tspfn.finetuning.tspfn_evaluate import TSPFNEvaluating
+from tspfn.evaluation.tspfn_evaluate import TSPFNEvaluating
 from data.data_module import TSPFNDataModule
 from data.utils.config import register_omegaconf_resolvers, instantiate_config_node_leaves
 from data.utils.saving import resolve_model_checkpoint_path
