@@ -39,7 +39,7 @@ from tspfn.utils import get_sizes_per_class, stratified_batch_split, half_batch_
 logger = logging.getLogger(__name__)
 
 
-class TSPFNFineTuning(TSPFNSystem):
+class TSPFNEvaluating(TSPFNSystem):
     """Multi-modal transformer to learn a representation from cardiac imaging and patient records data."""
 
     def __init__(

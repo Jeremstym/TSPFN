@@ -27,7 +27,7 @@ data:
   num_workers: 4 # try 4, 8, 16 depending on the system capabilities
 
 task:
-  _target_: tspfn.finetuning.tspfn_finetune.TSPFNFineTuning
+  _target_: tspfn.finetuning.tspfn_evaluate.TSPFNEvaluating
   embed_dim: 192 # As in TabPFN_v2 paper
   time_series_num_channels: ${data.num_channels}
   time_series_length: ${data.time_series_length}

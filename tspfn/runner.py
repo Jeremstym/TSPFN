@@ -15,7 +15,7 @@ import omegaconf
 import typing
 import collections
 from tspfn.pretraining.tspfn_module import TSPFNPretraining
-from tspfn.finetuning.tspfn_finetune import TSPFNFineTuning
+from tspfn.finetuning.tspfn_evaluate import TSPFNEvaluating
 from data.data_module import TSPFNDataModule
 from data.utils.config import register_omegaconf_resolvers, instantiate_config_node_leaves
 from data.utils.saving import resolve_model_checkpoint_path
@@ -146,7 +146,7 @@ class TSPFNRunner(ABC):
                 print(f"Best model checkpoint saved at {trainer.checkpoint_callback.best_model_path}")
             if cfg.test:
                 trainer.test(model, datamodule=datamodule)
-        elif isinstance(model, TSPFNFineTuning):
+        elif isinstance(model, TSPFNEvaluating):
             if cfg.train:
                 if cfg.resume:
                     assert cfg.ckpt is not None, "To resume training, a checkpoint path must be provided in cfg.ckpt"
