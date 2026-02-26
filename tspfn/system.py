@@ -43,10 +43,6 @@ class TSPFNSystem(pl.LightningModule, ABC):
     @classmethod
     def load_from_checkpoint(cls, *args, **kwargs):  # noqa: D102
         if ABC in cls.__bases__:
-            # We use this method to determine if the class is abstract because Lightning does not use the
-            # `@abstractmethod` decorator to mark abstract methods (e.g. `train_step`), rather relying on runtime
-            # warnings. Because of this, we cannot rely on Python's canonical function for detecting abstract classes,
-            # `inspect.isabstract`, which expects abstract classes to have explicitly defined abstract methods.
             raise NotImplementedError(
                 f"Class '{cls.__name__}' does not support being loaded from a checkpoint because it is an ABC. Either "
                 f"call `load_from_checkpoint` on the specific class of the system you want to load, or use the utility "
@@ -83,34 +79,6 @@ class TSPFNSystem(pl.LightningModule, ABC):
         if params is None:
             # params = self.parameters()
             params = filter(lambda p: p.requires_grad, self.parameters())
-
-        # Extract the optimizer and scheduler configs
-        # if optimizer_cfg := self.hparams["optim"].get("optimizer"):
-        #     scheduler_cfg = self.hparams["optim"].get("lr_scheduler")
-        # else:
-        #     optimizer_cfg = self.hparams["optim"]
-
-        # optimizer_cfg = self.hparams["optim"]["optimizer"]
-        # scheduler_cfg = None
-        # if scheduler_cfg := self.hparams["optim"].get("scheduler"):
-        #     print("Configuring scheduler with the following config:")
-        #     print(scheduler_cfg)
-        #     total_steps = self.trainer.estimated_stepping_batches
-        #     warmup_ratio = scheduler_cfg.get("num_warmup_steps", 0)
-        #     num_warmup = int(total_steps * warmup_ratio)
-
-        # # Instantiate the optimizer and scheduler
-        # configured_optimizer = {"optimizer": hydra.utils.instantiate(optimizer_cfg, params=params)}
-        # if scheduler_cfg:
-        #     configured_optimizer["lr_scheduler"] = {
-        #         "scheduler": hydra.utils.instantiate(
-        #             scheduler_cfg,
-        #             optimizer=configured_optimizer["optimizer"],
-        #             num_warmup_steps=num_warmup,
-        #             num_training_steps=total_steps,
-        #         ),
-        #         "interval": "step",
-        #     }
 
         # return configured_optimizer
         optimizer_cfg = self.hparams["optim"]["optimizer"]

@@ -69,21 +69,6 @@ class TSPFNPretraining(TSPFNSystem):
         self.hparams["lr"] = None
         self.num_classes = num_classes
 
-        # Configure losses/metrics to compute at each train/val/test step
-        # self.metrics = nn.ModuleDict()
-        # if target in TabularAttribute.numerical_attrs():
-        #     self.metrics[target] = MetricCollection([MeanAbsoluteError(), MeanSquaredError()])
-        # elif target in TabularAttribute.binary_attrs():
-        #     self.metrics[target] = MetricCollection(
-        #         [
-        #             BinaryAccuracy(),
-        #             BinaryAUROC(),
-        #             BinaryAveragePrecision(),
-        #             BinaryF1Score(),
-        #         ],
-        #     )
-        # else:  # attr in TabularAttribute.categorical_attrs()
-
         # Supervised losses and metrics
         self.predict_losses = {}
         if predict_losses:
@@ -96,12 +81,6 @@ class TSPFNPretraining(TSPFNSystem):
 
         # Initialize transformer encoder and self-supervised + prediction heads
         self.encoder, self.prediction_heads = self.configure_model()
-
-        # Initialize inference storage tensors
-        # self.ts_train_for_inference = torch.Tensor().to(self.device)
-        # self.y_train_for_inference = torch.Tensor().to(self.device)
-
-        # self.time_series_positional_encoding = time_series_positional_encoding
 
         # Use ModuleDict so metrics move to GPU automatically
         metrics_template = MetricCollection(
@@ -126,14 +105,10 @@ class TSPFNPretraining(TSPFNSystem):
     @property
     def example_input_array(self) -> Tensor:
         """Redefine example input array based on the cardiac attributes provided to the model."""
-        # 2 is the size of the batch in the example
         num_classes = 10  # Default number of classes in TabPFN prediction head
-        # labels = torch.cat([torch.randperm(5)]*2)
         labels = torch.arange(10) % num_classes
         labels = labels.unsqueeze(0)
         time_series_attrs = torch.randn(1, 10, 2, 250)  # (B, S, C, T)
-        # ts_example_input = torch.cat([time_series_attrs, labels.unsqueeze(-1)], dim=2)  # (B, S, T+1)
-        # num_classes = len(torch.unique(labels))
         return time_series_attrs, labels  # (B, S, C, T), (B, S, 1)
 
     def configure_model(
@@ -183,11 +158,6 @@ class TSPFNPretraining(TSPFNSystem):
 
         # Tokenize the attributes
         assert time_series_attrs is not None, "At least time_series_attrs must be provided to process_data."
-
-        # ts = time_series_attrs[:, :, :-1]  # (B, S, T)
-        # indices = torch.arange(ts.shape[0])
-        # indices = torch.arange(1024)  # Fix for pretraining with sequence length S =1024
-        # y = time_series_attrs[:, :, -1]  # (B, S, 1)
 
         if self.training or summary_mode:
             ts_batch_support, ts_batch_query, y_batch_support, y_batch_query = get_stratified_batch_split(
@@ -243,18 +213,6 @@ class TSPFNPretraining(TSPFNSystem):
             ts: (B, S (=Support+Query), C, T), Tokens to feed to the encoder.
         Returns: (B, Query, E), Embeddings of the input sequences.
         """
-
-        # if self.training or y_inference_support is None:
-        #     out_features = self.encoder(
-        #         ts.transpose(0, 1), y_batch_support.transpose(0, 1), ts_pe=self.time_series_positional_encoding
-        #     )[:, :, -1, :]
-        # elif y_inference_support is not None and ts_inference_support is not None:
-        #     # Use train set as context for predicting the query set on val/test inference
-        #     ts_full = torch.cat([ts_inference_support, ts], dim=1)
-        #     y_train = y_inference_support
-        #     out_features = self.encoder(
-        #         ts_full.transpose(0, 1), y_train.transpose(0, 1), ts_pe=self.time_series_positional_encoding
-        #     )[:, :, -1, :]
 
         if self.training or y_inference_support is None:
             ts = torch.cat([ts_batch_support, ts_batch_query], dim=1)  # (B, S+Q, C, T)
@@ -392,7 +350,6 @@ class TSPFNPretraining(TSPFNSystem):
                 time_series_input, target_labels = batch_dict["query"]  # (N, C, T), (N,)
                 time_series_support, support_labels = batch_dict["support"]  # (N, C, T), (N,)
             elif type(batch) == dict:
-                # batch_dict, _, _ = batch
                 time_series_input, target_labels = batch["query"]  # (N, C, T), (N,)
                 time_series_support, support_labels = batch["support"]  # (N, C, T), (N,)
 
@@ -457,7 +414,6 @@ class TSPFNPretraining(TSPFNSystem):
 
             # Compute loss for the entire batch at once
             loss_val = target_loss(y_hat_flat, target_flat)
-            # trainable_losses.append(loss_val)
 
             loss_name = f"{target_loss.__class__.__name__.lower().replace('loss', '')}/{target_task}"
             losses[loss_name] = loss_val
@@ -466,7 +422,6 @@ class TSPFNPretraining(TSPFNSystem):
             self.metrics[stage][target_task].update(y_hat_flat, target_flat)
 
         losses["s_loss"] = torch.stack(list(losses.values())).mean()
-        # losses["s_loss"] = torch.stack(trainable_losses).mean()
         metrics.update(losses)
 
         return metrics
@@ -492,30 +447,3 @@ class TSPFNPretraining(TSPFNSystem):
             writer.writeheader()
             writer.writerows(output_data)
         logger.info("Test metrics saved to test_metrics.csv")
-
-    # def on_test_epoch_end(self):
-    #     all_metrics = {}
-    #     for target_task in self.predict_losses:
-    #         for metric_tag, metric in self.metrics[target_task].items():
-    #             metrics_value = metric.compute()
-    #             self.log(f"test_{metric_tag}/{target_task}", metrics_value)
-    #             all_metrics[f"{metric_tag}/{target_task}"] = (
-    #                 metrics_value.item() if hasattr(metrics_value, "item") else metrics_value
-    #             )
-    #             metric.reset()
-    #     output_dir = os.getcwd()
-    #     csv_file = "test_metrics.csv"
-    #     with open(csv_file, mode="a", newline="") as f:
-    #         writer = csv.writer(f)
-    #         # Write headers
-    #         writer.writerow(["metric", "value"])
-    #         # Write metric data
-    #         for key, value in all_metrics.items():
-    #             writer.writerow([key, value])
-
-    #     # Print metrics to terminal
-    #     logger.info(f"Test metrics: {all_metrics}")
-
-    # Reset inference storage tensors for next dataset
-    # self.y_train_for_inference = torch.Tensor().to(self.device)
-    # self.ts_train_for_inference = torch.Tensor().to(self.device)
