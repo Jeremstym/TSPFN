@@ -1,5 +1,3 @@
-# Angus Dempster, Daniel F Schmidt, Geoffrey I Webb
-
 # MiniRocket: A Very Fast (Almost) Deterministic Transform for Time Series
 # Classification
 
