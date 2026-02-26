@@ -2,17 +2,15 @@ _target_: tspfn.architecture.tspfn_encoder.TSPFNEncoder
 seed: ${seed}
 tabpfn_kwargs:
   model_path: ${oc.env:TABPFN_MODEL_PATH}
-  # model_path: ${oc.env:TABPFNv25_MODEL_PATH}
   check_bar_distribution_criterion: False
   cache_trainset_representation: False
   which: classifier
   version: v2
-  # version: v2.5
-  download_if_not_exists: False # needed for v2.5 but unknown for v2
+  download_if_not_exists: False
 updated_pfn_path: ${updated_pfn_path} # Path to updated TabPFN model weights after pretraining
 random_init: False # Whether to randomly initialize the TabPFN weights instead of loading pretrained weights
-recompute_layer: True #CHECK True for TabPFN v2.5, False for v2
-features_per_group: 1 #CHECK Number of features per group for time series data (WARNING: 1 is for TabPFN v2)
+recompute_layer: True
+features_per_group: 1
 embed_dim: ${task.embed_dim} # Embedding dimension for the TSPFN encoder
 positional_encoding: ${task.time_series_positional_encoding} # Type of positional encoding to use for time series data: "none", "sinusoidal", "rope", "learned"
 use_tabpfn_pe: True # Whether to use the original TabPFN positional encodings in addition to any time series positional encodings (only applicable if positional_encoding is "cwpe" or "cwpe+rope")

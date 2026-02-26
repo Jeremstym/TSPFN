@@ -1,9 +1,6 @@
 # @package _global_
 
 defaults:
-  # - /task/model/prediction_head: pfn-prediction
-  # - /task/model/encoder: tspfn-encoder
-  # # - /task/model/loc_head: channel-loc
   - override /task/model: null
   - override /task/optim: adamw
   - override /data: evaluating-abide
@@ -30,11 +27,11 @@ task:
   num_classes: ${data.num_classes}
   num_channels: ${data.num_channels}
   xgb_params:
-    n_estimators: 1000          # Higher count allows the model to learn subtle patterns
-    max_depth: 3               # Shallow trees generalize better on raw ECG signals
-    learning_rate: 0.05        # Lower learning rate for more stable convergence
-    subsample: 0.8             # Use 80% of data rows per tree
-    colsample_bytree: 0.3      # Only look at 30% of time steps per tree (crucial for 1000+ features)
+    n_estimators: 1000
+    max_depth: 3
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.3     
     tree_method: "hist"
     device: "cuda"
     verbosity: 0

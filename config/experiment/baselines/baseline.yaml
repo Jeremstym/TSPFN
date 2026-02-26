@@ -37,8 +37,6 @@ task:
   stride: 8
   split_finetuning: 0.5
   predict_losses: ${data.predict_losses}
-    # classification:
-    #   _target_: torch.nn.CrossEntropyLoss
   channel_handler: flatten
   seed : ${seed}
   optim:
@@ -49,10 +47,6 @@ task:
       # _target_: torch.optim.AdamW
       # lr: 1e-3
       # weight_decay: 1e-2
-    # scheduler:
-    #   _target_: transformers.get_linear_schedule_with_warmup
-    #   num_warmup_steps: 0.1
-
 
 # Change checkpoint loading defaults to:
 ckpt: ??? # Make it mandatory to provide a checkpoint

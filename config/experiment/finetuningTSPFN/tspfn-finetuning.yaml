@@ -3,7 +3,6 @@
 defaults:
   - /task/model/prediction_head: pfn-prediction
   - /task/model/encoder: tspfn-encoder
-  # - /task/model/loc_head: channel-loc
   - override /task/model: null
   - override /task/optim: adamw
   - override /data: evaluating-abide
@@ -35,17 +34,12 @@ task:
   num_classes: ${data.num_classes}
   split_finetuning: 0.5
   predict_losses: ${data.predict_losses}
-    # classification:
-    #   _target_: torch.nn.CrossEntropyLoss
-    # location:
-    #   _target_: torch.nn.BCEWithLogitsLoss
   time_series_positional_encoding: none
   channel_handler: null
   seed : ${seed}
   max_batches_stored_for_inference: 256
   model:
     freeze_encoder: False # Whether to freeze the TabPFN encoder during training
-    # loc_head: null
   optim:
     optimizer:
       _target_: torch.optim.AdamW

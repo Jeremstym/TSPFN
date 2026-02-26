@@ -1,11 +1,6 @@
-# _target_: tspfn.architecture.tcn.Small_TCN
-# num_channels: ${data.num_channels}
-# num_classes: ${data.num_classes}
-# seq_length: ${data.time_series_length}
 _target_: tspfn.architecture.tcn.SOTA_TCN_Baseline
 num_channels: ${data.num_channels}
 num_classes: ${data.num_classes}
 Ft: 64
 Kt: 11
 Pt: 0.2
-# seq_length: ${data.time_series_length}
