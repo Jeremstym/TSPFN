@@ -92,7 +92,7 @@ def get_imputed_block(ts, window_size=100, max_nan_ratio=0.3):
     Finds a window of 100 rows where NaNs are below a threshold,
     then imputes the values.
     """
-    # 1. Calculate how many NaNs are in every possible window
+    # Calculate how many NaNs are in every possible window
     # We sum the NaNs across all 5 channels for each row
     nans_per_row = np.isnan(ts).any(axis=1).astype(int)
 
@@ -103,7 +103,7 @@ def get_imputed_block(ts, window_size=100, max_nan_ratio=0.3):
     kernel = np.ones(window_size)
     nan_counts = np.convolve(nans_per_row, kernel, mode="valid")
 
-    # 2. Find windows that meet our tolerance (e.g., < 30% rows have NaNs)
+    # Find windows that meet our tolerance (e.g., < 30% rows have NaNs)
     valid_starts = np.where(nan_counts <= (window_size * max_nan_ratio))[0]
 
     if valid_starts.size == 0:
@@ -113,7 +113,7 @@ def get_imputed_block(ts, window_size=100, max_nan_ratio=0.3):
     best_start = valid_starts[np.argmin(nan_counts[valid_starts])]
     block = ts[best_start : best_start + window_size].copy()
 
-    # 3. Impute using Pandas (the most efficient way for FFilling)
+    # Impute using Pandas (the most efficient way for FFilling)
     df_block = pd.DataFrame(block)
 
     # Step-wise imputation:
@@ -130,9 +130,6 @@ def filter_imputed_blocks(source_folder, target_folder, window_size=100, max_nan
         if not file.endswith(".npz"):
             raise ValueError(f"Unexpected file format: {file}. Expected .npz files.")
         data = np.load(os.path.join(source_folder, file))["data"]
-        # imputed_block = get_imputed_block(data, window_size, max_nan_ratio)
-        # imputed_block = get_terminal_100_points(data, window_size, median=median)
-        # imputed_block = get_window_with_gap(data, window_size=window_size, gap_size=48, median=median)
         imputed_block = get_window_with_gap_v2(data, window_size=window_size, gap_size=48, global_medians=median)
         if imputed_block is not None:
             np.savez_compressed(os.path.join(target_folder, file), data=imputed_block)
@@ -144,7 +141,7 @@ def create_final_labels(ts_folder, patient_csv_path, output_path):
     """
     print("Generating Master Label CSV...")
 
-    # 1. Load the ground truth from the patient table
+    # Load the ground truth from the patient table
     # hospitaldischargestatus: 'Expired' = 1, anything else = 0
     df_patient = pd.read_csv(
         patient_csv_path, usecols=["patientunitstayid", "hospitaldischargestatus"], compression="gzip"
@@ -154,7 +151,7 @@ def create_final_labels(ts_folder, patient_csv_path, output_path):
     # Create a mapping for quick lookup
     label_map = dict(zip(df_patient["patientunitstayid"], df_patient["mortality_label"]))
 
-    # 2. Get the list of patients who actually have saved time series data
+    # Get the list of patients who actually have saved time series data
     # We only want to label patients we can actually train on
     extracted_pids = [int(f.split(".")[0]) for f in os.listdir(ts_folder) if f.endswith(".npz")]
 
@@ -163,7 +160,7 @@ def create_final_labels(ts_folder, patient_csv_path, output_path):
         if pid in label_map:
             final_data.append({"patientunitstayid": pid, "mortality_label": label_map[pid]})
 
-    # 3. Save to CSV
+    # Save to CSV
     df_labels = pd.DataFrame(final_data)
     df_labels.to_csv(output_path, index=False)
 
@@ -224,14 +221,14 @@ def get_terminal_100_points(ts, window_size=100, median: list = None):
     N = ts.shape[0]
 
     if N >= window_size:
-        # 1. Long Stay: Take the most recent 100 points
+        # Long Stay: Take the most recent 100 points
         block = ts[-window_size:].copy()
     else:
-        # 2. Short Stay: Pad the beginning with NaNs
+        # Short Stay: Pad the beginning with NaNs
         pad_width = window_size - N
         block = np.pad(ts, ((pad_width, 0), (0, 0)), mode="constant", constant_values=np.nan)
 
-    # 3. Impute Gaps
+    # Impute Gaps
     # Convert to DataFrame to use clinical imputation logic
     df = pd.DataFrame(block)
 
@@ -239,7 +236,7 @@ def get_terminal_100_points(ts, window_size=100, median: list = None):
     # Backward fill handles the Padding we just added at the start
     df = df.interpolate(method="linear", limit_direction="both").ffill().bfill()
 
-    # 4. Global Median Fallback (for patients missing a whole channel)
+    # Global Median Fallback (for patients missing a whole channel)
     # [HR, Resp, SpO2, MAP, Temp]
     # global_medians = [85, 18, 97, 80, 37]
     global_medians = calculate_true_medians() if median is None else median
@@ -257,14 +254,14 @@ def get_window_with_gap(ts, window_size=100, gap_size=48, median: list = None):
     """
     N = ts.shape[0]
 
-    # 1. Define the 'End' of our observation (4 hours before discharge)
+    # Define the 'End' of our observation (4 hours before discharge)
     end_idx = N - gap_size
 
-    # 2. If the patient died/left before the gap even started, we have no valid data
+    # If the patient died/left before the gap even started, we have no valid data
     if end_idx <= 0:
         return None
 
-    # 3. Define the 'Start' of our observation
+    # Define the 'Start' of our observation
     start_idx = end_idx - window_size
 
     if start_idx >= 0:
@@ -281,8 +278,6 @@ def get_window_with_gap(ts, window_size=100, gap_size=48, median: list = None):
         # Pre-pad with NaNs (which we will impute/median-fill later)
         block = np.pad(available_data, ((pad_width, 0), (0, 0)), mode="constant", constant_values=np.nan)
 
-        # block = pd.DataFrame(block)
-        # block = block.interpolate(method='linear', limit_direction='both').ffill().bfill()
         global_medians = calculate_true_medians() if median is None else median
         if np.isnan(block).any():
             for i, median_val in enumerate(global_medians):
@@ -303,18 +298,18 @@ def get_window_with_gap_v2(ts, window_size=100, gap_size=48, global_medians=None
     # Create a mask: 1 for real data, 0 for missing/padded
     mask = (~np.isnan(block)).astype(np.float32)
 
-    # 1. Padding if too short
+    # Padding if too short
     if len(block) < window_size:
         pad_len = window_size - len(block)
         block = np.pad(block, ((pad_len, 0), (0, 0)), constant_values=np.nan)
         mask = np.pad(mask, ((pad_len, 0), (0, 0)), constant_values=0)
 
-    # 2. Advanced Imputation using Pandas
+    # Advanced Imputation using Pandas
     df = pd.DataFrame(block)
     # Fill small gaps with linear lines, then carry values forward
     df = df.interpolate(method="linear", limit_direction="both").ffill().bfill()
 
-    # 3. Last Resort: Global Medians (if a channel is 100% missing)
+    # Last Resort: Global Medians (if a channel is 100% missing)
     if global_medians is not None:
         df = df.fillna(pd.Series(global_medians))
 

@@ -41,14 +41,14 @@ def preprocess_hirid_data(
             num_steps = vals.shape[0]
 
             if num_steps < window_size:
-                # 1. Identify the last recorded values for this specific patient
+                # Identify the last recorded values for this specific patient
                 last_val = vals[-1, :]
 
-                # 2. Create a padding matrix where every row is that last recorded value
+                # Create a padding matrix where every row is that last recorded value
                 padding_rows = window_size - num_steps
                 padding = np.tile(last_val, (padding_rows, 1))
 
-                # 3. Stack the real data on top of the 'edge' padding
+                # Stack the real data on top of the 'edge' padding
                 padded_group = np.vstack([vals, padding])
                 patient_matrices.append(padded_group)
             else:

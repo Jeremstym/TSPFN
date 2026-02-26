@@ -28,7 +28,6 @@ from torch.utils.data import Dataset, DataLoader
 class PTB2ChannelDataset(Dataset):
     def __init__(self, root, split):
         self.root = root
-        # self.files = glob(os.path.join(root, f"{split}/*.pkl"))
 
         self.X = np.load(os.path.join(root, f"{split}.npy"))
         # Subsample time series
@@ -36,7 +35,6 @@ class PTB2ChannelDataset(Dataset):
         sub_indices = np.random.choice(indices, size=int(len(self.X) * 0.3), replace=False)
         self.X = self.X[sub_indices]
         self.Y = np.load(os.path.join(root, f"{split}_label.npy"))
-        # self.Y = self.Y[sub_indices]
         self.X = torch.from_numpy(self.X).float()
         self.X = self.X.reshape(self.X.shape[0], 2, -1)  # Reshape to [Batch, Channels, Signal_Length]
         self.Y = torch.from_numpy(self.Y).long().unsqueeze(1)  # Shape [Batch, 1]
@@ -49,11 +47,8 @@ class PTB2ChannelDataset(Dataset):
 
         if self.X.shape[2] < 250:
             self.X = F.pad(self.X, (0, 250 - self.X.shape[2]), "constant", 0)  # New shape [Batch, Channels, 250]
-        #     self.X = self.X.flatten(start_dim=1)  # New shape [Batch, Channels*250]
         elif self.X.shape[2] == 250:
             pass
-        # elif self.X.shape[2] == 250:
-        #     self.X = self.X.flatten(start_dim=1)  # Shape [Batch, Channels*250]
         else:
             raise ValueError(
                 f"Expected signal length of 250, but got {self.X.shape[2]}. Please check the data preprocessing."
@@ -63,7 +58,6 @@ class PTB2ChannelDataset(Dataset):
         return len(self.X)
 
     def __getitem__(self, index):
-        # ds = torch.cat((self.X[index], self.Y[index]), dim=-1)  # Shape [Batch, Channels*250+1]
         return self.X[index], self.Y[index]
 
 
@@ -89,11 +83,8 @@ class PTB3ChannelDataset(Dataset):
 
         if self.X.shape[2] < 166:
             self.X = F.pad(self.X, (0, 166 - self.X.shape[2]), "constant", 0)  # New shape [Batch, Channels, 166]
-        #     self.X = self.X.flatten(start_dim=1)  # New shape [Batch, Channels*166]
         elif self.X.shape[2] == 166:
             pass
-        # elif self.X.shape[2] == 166:
-        #     self.X = self.X.flatten(start_dim=1)  # Shape [Batch, Channels*166]
         else:
             raise ValueError(
                 f"Expected signal length of 166, but got {self.X.shape[2]}. Please check the data preprocessing."
@@ -103,7 +94,6 @@ class PTB3ChannelDataset(Dataset):
         return len(self.X)
 
     def __getitem__(self, index):
-        # ds = torch.cat((self.X[index], self.Y[index]), dim=-1)  # Shape [Batch, Channels*166+1]
         return self.X[index], self.Y[index]
 
 
@@ -203,11 +193,8 @@ class TUAB2ChannelDataset(Dataset):
 
         if self.X.shape[2] < 250:
             self.X = F.pad(self.X, (0, 250 - self.X.shape[2]), "constant", 0)  # New shape [Batch, Channels, 250]
-        #     self.X = self.X.flatten(start_dim=1)  # New shape [Batch, Channels*250]
         elif self.X.shape[2] == 250:
             pass
-        # elif self.X.shape[2] == 250:
-        #     self.X = self.X.flatten(start_dim=1)  # Shape [Batch, Channels*250]
         else:
             raise ValueError(
                 f"Expected signal length of 250, but got {self.X.shape[2]}. Please check the data preprocessing."
@@ -217,8 +204,6 @@ class TUAB2ChannelDataset(Dataset):
         return len(self.files)
 
     def __getitem__(self, index):
-        # print(f"Index: {index}, X shape: {self.X[index].shape}, Y shape: {self.Y[index].shape}")
-        # ds = torch.cat((self.X[index], self.Y[index]), dim=-1)  # Shape [Batch, Channels, 250+1]
         return self.X[index], self.Y[index]
 
 
@@ -246,9 +231,6 @@ class TUAB3ChannelDataset(Dataset):
 
         if self.X.shape[2] < 166:
             self.X = F.pad(self.X, (0, 166 - self.X.shape[2]), "constant", 0)  # New shape [Batch, Channels, 166]
-        #     self.X = self.X.flatten(start_dim=1)  # New shape [Batch, Channels*166]
-        # elif self.X.shape[2] == 166:
-        #     self.X = self.X.flatten(start_dim=1)  # Shape [Batch, Channels*166]
         elif self.X.shape[2] == 166:
             pass
         else:
@@ -260,7 +242,6 @@ class TUAB3ChannelDataset(Dataset):
         return len(self.files)
 
     def __getitem__(self, index):
-        # print(f"Index: {index}, X shape: {self.X[index].shape}, Y shape: {self.Y[index].shape}")
         return self.X[index], self.Y[index]
 
 
@@ -288,9 +269,6 @@ class TUAB4ChannelDataset(Dataset):
 
         if self.X.shape[2] < 125:
             self.X = F.pad(self.X, (0, 125 - self.X.shape[2]), "constant", 0)  # New shape [Batch, Channels, 125]
-        #     self.X = self.X.flatten(start_dim=1)  # New shape [Batch, Channels*125]
-        # elif self.X.shape[2] == 125:
-        #     self.X = self.X.flatten(start_dim=1)  # Shape [Batch, Channels*125]
         elif self.X.shape[2] == 125:
             pass
         else:
@@ -302,7 +280,6 @@ class TUAB4ChannelDataset(Dataset):
         return len(self.files)
 
     def __getitem__(self, index):
-        # print(f"Index: {index}, X shape: {self.X[index].shape}, Y shape: {self.Y[index].shape}")
         return self.X[index], self.Y[index]
 
 
@@ -330,9 +307,6 @@ class TUAB5ChannelDataset(Dataset):
 
         if self.X.shape[2] < 100:
             self.X = F.pad(self.X, (0, 100 - self.X.shape[2]), "constant", 0)  # New shape [Batch, Channels, 100]
-        #     self.X = self.X.flatten(start_dim=1)  # New shape [Batch, Channels*100]
-        # elif self.X.shape[2] == 100:
-        #     self.X = self.X.flatten(start_dim=1)  # Shape [Batch, Channels*100]
         elif self.X.shape[2] == 100:
             pass
         else:
@@ -344,7 +318,6 @@ class TUAB5ChannelDataset(Dataset):
         return len(self.files)
 
     def __getitem__(self, index):
-        # print(f"Index: {index}, X shape: {self.X[index].shape}, Y shape: {self.Y[index].shape}")
         return self.X[index], self.Y[index]
 
 
@@ -373,11 +346,8 @@ class TUEV2ChannelDataset(Dataset):
 
         if self.X.shape[2] < 250:
             self.X = F.pad(self.X, (0, 250 - self.X.shape[2]), "constant", 0)  # New shape [Batch, Channels, 250]
-        #     self.X = self.X.flatten(start_dim=1)  # New shape [Batch, Channels*250]
         elif self.X.shape[2] == 250:
             pass
-        # elif self.X.shape[2] == 250:
-        #     self.X = self.X.flatten(start_dim=1)  # Shape [Batch, Channels*250]
         else:
             raise ValueError(
                 f"Expected signal length of 250, but got {self.X.shape[2]}. Please check the data preprocessing."
@@ -387,7 +357,6 @@ class TUEV2ChannelDataset(Dataset):
         return len(self.files)
 
     def __getitem__(self, index):
-        # print(f"Index: {index}, X shape: {self.X[index].shape}, Y shape: {self.Y[index].shape}")
         return self.X[index], self.Y[index]
 
 
@@ -416,11 +385,8 @@ class TUEV3ChannelDataset(Dataset):
 
         if self.X.shape[2] < 166:
             self.X = F.pad(self.X, (0, 166 - self.X.shape[2]), "constant", 0)  # New shape [Batch, Channels, 166]
-        #     self.X = self.X.flatten(start_dim=1)  # New shape [Batch, Channels*166]
         elif self.X.shape[2] == 166:
             pass
-        # elif self.X.shape[2] == 166:
-        #     self.X = self.X.flatten(start_dim=1)  # Shape [Batch, Channels*166]
         else:
             raise ValueError(
                 f"Expected signal length of 166, but got {self.X.shape[2]}. Please check the data preprocessing."
@@ -430,7 +396,6 @@ class TUEV3ChannelDataset(Dataset):
         return len(self.files)
 
     def __getitem__(self, index):
-        # print(f"Index: {index}, X shape: {self.X[index].shape}, Y shape: {self.Y[index].shape}")
         return self.X[index], self.Y[index]
 
 
@@ -459,11 +424,8 @@ class TUEV4ChannelDataset(Dataset):
 
         if self.X.shape[2] < 125:
             self.X = F.pad(self.X, (0, 125 - self.X.shape[2]), "constant", 0)  # New shape [Batch, Channels, 125]
-        #     self.X = self.X.flatten(start_dim=1)  # New shape [Batch, Channels*125]
         elif self.X.shape[2] == 125:
             pass
-        # elif self.X.shape[2] == 125:
-        #     self.X = self.X.flatten(start_dim=1)  # Shape [Batch, Channels*125]
         else:
             raise ValueError(
                 f"Expected signal length of 125, but got {self.X.shape[2]}. Please check the data preprocessing."
@@ -473,7 +435,6 @@ class TUEV4ChannelDataset(Dataset):
         return len(self.files)
 
     def __getitem__(self, index):
-        # print(f"Index: {index}, X shape: {self.X[index].shape}, Y shape: {self.Y[index].shape}")
         return self.X[index], self.Y[index]
 
 
@@ -502,11 +463,8 @@ class TUEV5ChannelDataset(Dataset):
 
         if self.X.shape[2] < 100:
             self.X = F.pad(self.X, (0, 100 - self.X.shape[2]), "constant", 0)  # New shape [Batch, Channels, 100]
-        #     self.X = self.X.flatten(start_dim=1)  # New shape [Batch, Channels*100]
         elif self.X.shape[2] == 100:
             pass
-        # elif self.X.shape[2] == 100:
-        #     self.X = self.X.flatten(start_dim=1)  # Shape [Batch, Channels*100]
         else:
             raise ValueError(
                 f"Expected signal length of 100, but got {self.X.shape[2]}. Please check the data preprocessing."
@@ -516,7 +474,6 @@ class TUEV5ChannelDataset(Dataset):
         return len(self.files)
 
     def __getitem__(self, index):
-        # print(f"Index: {index}, X shape: {self.X[index].shape}, Y shape: {self.Y[index].shape}")
         return self.X[index], self.Y[index]
 
 
@@ -656,48 +613,38 @@ class TSPFNMetaDataset(Dataset):
         for dataset in datasets.values():
             n = len(dataset.X)
             if n < chunk_size:
-                # Optionnel : On peut ignorer ou padder les datasets trop petits
                 raise ValueError(
                     f"Dataset of size {n} is smaller than chunk size {chunk_size}. Please check the datasets or adjust the chunk size."
                 )
 
             for i in range(0, n - chunk_size + 1, chunk_size):
-                # self.chunks.append((X[i : i + chunk_size], y[i : i + chunk_size]))
                 self.chunks.append((dataset[i : i + chunk_size]))
 
             # (Overlapping last chunk)
             if n % chunk_size != 0:
-                # self.chunks.append((X[-chunk_size:], y[-chunk_size:]))
                 self.chunks.append((dataset[-chunk_size:]))
 
     def __len__(self):
         return len(self.chunks)
 
     def __getitem__(self, idx):
-        # On retourne le bloc de 10k (X et y)
-        # Supposons que y est la dernière colonne
         x, y = self.chunks[idx]
         return x, y
 
 
 class TSPFNValidationDataset(Dataset):
     def __init__(self, train_datasets_list: Dict, val_datasets_list: Dict, chunk_size=10000):
-        # self.n_support = n_support
-        # self.n_query = n_query
         self.pairs = []
 
         self.n_support = int(chunk_size * 0.8)  # 80% for support
         self.n_query = chunk_size - self.n_support  # 20% for query
 
         for (train_dataset), (val_dataset) in zip(train_datasets_list.values(), val_datasets_list.values()):
-            # 1. On découpe le Val en chunks de 2000 (les Query)
             n_v = len(val_dataset.X)
-            # On utilise le sliding window pour ne rien perdre du Val
             indices = range(0, n_v - self.n_query + 1, self.n_query)
 
             for i in indices:
                 query_chunk, label_chunk = val_dataset[i : i + self.n_query]
-                # On stocke le chunk de val ET une référence au train complet associé
                 self.pairs.append(
                     {"full_train": (train_dataset.X, train_dataset.Y), "query_chunk": (query_chunk, label_chunk)}
                 )
@@ -736,13 +683,10 @@ class TSPFNTestDataset(Dataset):
         self.pairs = []
 
         for (train_dataset), (test_dataset) in zip(train_datasets_list.values(), test_datasets_list.values()):
-            # 1. On découpe le Val en chunks de 2000 (les Query)
             n_v = len(test_dataset.X)
-            # On utilise le sliding window pour ne rien perdre du Val
             indices = range(0, n_v - self.n_query + 1, self.n_query)
             for i in indices:
                 query_chunk, label_chunk = test_dataset[i : i + self.n_query]
-                # On stocke le chunk de val ET une référence au train complet associé
                 self.pairs.append(
                     {"full_train": (train_dataset.X, train_dataset.Y), "query_chunk": (query_chunk, label_chunk)}
                 )

@@ -1,6 +1,6 @@
 # --------------------------------------------------------
-# Large Brain Model for Learning Generic Representations with Tremendous EEG Data in BCI
-# By Wei-Bang Jiang
+# Large Brain Model for Learning Generic Representations with Tremendous EEG Data in BCI (2024)
+# By Wei-Bang Jiang (2024)
 # Based on BIOT code base
 # https://github.com/ycq091044/BIOT
 # --------------------------------------------------------
@@ -140,36 +140,17 @@ def BuildEvents(signals, times, EventData, keep_channels):
         start_slice = pad_width + idx_start - int(0.5 * fs)
         end_slice = start_slice + window_samples
 
-        # 1. Extract the segment for ALL 16 channels first -> Shape (16, 400)
+        # Extract the segment for ALL 16 channels first -> Shape (16, 400)
         segment = signals_padded[:, start_slice:end_slice]
         
         if segment.shape[1] < target_pre_resample_points:
             raise ValueError(f"Segment too short: expected {target_pre_resample_points} points, got {segment.shape[1]} points.")
             # continue # Skip if window goes out of bounds
 
-        # 2. Select 2 channels (as per your logic)
-        # if len(chans_present) >= 2:
-        #     # Pick two from the offending channels
-        #     chosen_chans_orig = np.random.choice(chans_present, size=2, replace=False)
-        # else:
-        #     # If only 1 offending channel, pick it and a helper channel
-        #     primary = chans_present[0]
-        #     helper = keep_channels[1] if primary == keep_channels[0] else keep_channels[0]
-        #     chosen_chans_orig = [primary, helper]
-
-        # # Convert original IDs to 0-15 indices
-        # indices = [chan_map[c] for c in chosen_chans_orig]
-
         # For now, arbitrary chosen channels:
         indices = [chan_map[15], chan_map[19], chan_map[2], chan_map[6], chan_map[3]]  # C3, C4, P3 as an example
-        # indices = [chan_map[15], chan_map[19], chan_map[2], chan_map[6]]  # C3, C4, P3 as an example
-        # indices = [chan_map[15], chan_map[19], chan_map[2]]  # C3, C4, P3 as an example
-        # indices = [chan_map[15], chan_map[19]]  # C3, C4, P3 as an example
         
-        # 3. Reduce to (5, 400)
         reduced_segment = segment[indices, :] 
-
-        # 4. Resample from 400 points to 100 points -> Shape (5, 100)
         resampled_segment = sgn.resample(reduced_segment, 100, axis=1)
 
         all_segments.append(resampled_segment)
@@ -197,7 +178,6 @@ def readEDF(fileName):
 
     _, times = Rawdata[:]
     signals = Rawdata.get_data(units="uV")
-    # signals /= 100.0  # Normalize to 0.1mV units
     RecFile = fileName[0:-3] + "rec"
     eventData = np.genfromtxt(RecFile, delimiter=",")
     Rawdata.close()
@@ -267,16 +247,12 @@ if __name__ == "__main__":
     train_sub = list(set([f.split("_")[0] for f in train_files_path]))
     print("train sub", len(train_sub))
     target_train_dir = os.path.join(root, "fivechannels", "train")
-    # target_eval_dir = os.path.join(root, "fivechannels", "val")
     target_test_dir = os.path.join(root, "fivechannels", "val")
     if not os.path.exists(target_train_dir):
         os.makedirs(target_train_dir)
-    # if not os.path.exists(target_eval_dir):
-    #     os.makedirs(target_eval_dir)
     if not os.path.exists(target_test_dir):
         os.makedirs(target_test_dir)
 
-    # val_sub = np.random.choice(train_sub, size=int(len(train_sub) * 0.2), replace=False)
     val_sub = []
     train_sub = list(set(train_sub) - set(val_sub))
     val_files = [f for f in train_files_path if f.split("_")[0] in val_sub]
@@ -286,36 +262,7 @@ if __name__ == "__main__":
         os.system(
             f"mv {os.path.join(root, 'fivechannels', 'processed_train', file)} {target_train_dir}"
         )
-    # for file in val_files:
-    #     os.system(
-    #         f"mv {os.path.join(root, 'fivechannels', 'processed_train', file)} {target_eval_dir}"
-    #     )
     for file in test_files_path:
         os.system(
             f"mv {os.path.join(root, 'fivechannels', 'processed_eval', file)} {target_test_dir}"
         )
-
-    # root = "/path/to/folder/TUEV/edf/processed"
-    # target_root = "/path/to/folder/tinyTUEV/processed"
-
-    # # Select just 100 samples from trainset
-    # train_files = os.listdir(os.path.join(root, "processed_train"))
-    # selected_train_files = np.random.choice(train_files, size=100, replace=False)
-    # for file in selected_train_files:
-    #     os.system(
-    #         f"cp {os.path.join(root, 'processed_train', file)} {os.path.join(target_root, 'processed_train', file)}"
-    #     )
-    # # Select just 50 samples from evalset
-    # eval_files = os.listdir(os.path.join(root, "processed_eval"))
-    # selected_eval_files = np.random.choice(eval_files, size=50, replace=False)
-    # for file in selected_eval_files:
-    #     os.system(
-    #         f"cp {os.path.join(root, 'processed_eval', file)} {os.path.join(target_root, 'processed_eval', file)}"
-    #     )
-    # # Select just 50 samples from testset
-    # test_files = os.listdir(os.path.join(root, "processed_test"))
-    # selected_test_files = np.random.choice(test_files, size=50, replace=False)
-    # for file in selected_test_files:
-    #     os.system(
-    #         f"cp {os.path.join(root, 'processed_test', file)} {os.path.join(target_root, 'processed_test', file)}"
-    #     )

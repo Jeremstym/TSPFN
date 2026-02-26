@@ -28,12 +28,8 @@ from lightning.pytorch.utilities.combined_loader import CombinedLoader
 from data.evaluation_datasets import (
     ECG5000Dataset,
     ESRDataset,
-    ORCHIDDataset,
-    ABIDEDataset,
     EICUCRDDataset,
-    BlinkDataset,
     EOSDataset,
-    AtrialFibrillationDataset,
     CPSCDataset,
 )
 from data.pretraining_datasets import (
@@ -77,7 +73,6 @@ class PretrainingTSPFNDataModule(pl.LightningDataModule):
         self,
         train_datasets: DictConfig,
         val_datasets: DictConfig,
-        # test_datasets: DictConfig,
         meta_batch_size=1,
         chunk_size=10000,
         num_workers: int = 0,
@@ -87,7 +82,6 @@ class PretrainingTSPFNDataModule(pl.LightningDataModule):
         super().__init__()
         self.train_datasets = train_datasets
         self.val_datasets = val_datasets
-        # self.test_datasets = test_datasets
         self.meta_batch_size = meta_batch_size
         self.chunk_size = chunk_size
         self.num_workers = num_workers
@@ -96,18 +90,13 @@ class PretrainingTSPFNDataModule(pl.LightningDataModule):
 
     def setup(self, stage=None):
         if stage == "fit" or stage is None:
-            # On instancie les datasets de train un par un
             train_instances = {name: instantiate(cfg) for name, cfg in self.train_datasets.items()}
-            # On instancie les datasets de val
             val_instances = {name: instantiate(cfg) for name, cfg in self.val_datasets.items()}
 
             self.train_ds = TSPFNMetaDataset(train_instances, self.chunk_size)
             self.val_ds = TSPFNValidationDataset(train_instances, val_instances, self.chunk_size)
 
         if stage == "test":
-            # test_instances = {
-            #     name: instantiate(cfg) for name, cfg in self.test_datasets.items()
-            # }
             self.test_ds = TSPFNValidationDataset(train_instances, val_instances, self.chunk_size)
 
     def train_dataloader(self):
@@ -340,20 +329,6 @@ class ECG5000FineTuneDataModule(TSPFNDataModule):
 
     def setup(self, stage: Optional[str] = None) -> None:
 
-        # full_train_dataset = ECG5000Dataset(
-        #     root=self.data_roots,
-        #     split="train",
-        #     support_size=self.support_size,
-        # )
-
-        # # Handle Subsets
-        # labels = full_train_dataset.Y
-        # train_indices, val_indices = train_test_split(
-        #     range(len(full_train_dataset)), test_size=0.2, stratify=labels, random_state=self.seed
-        # )
-
-        # self.train_dataset = Subset(full_train_dataset, train_indices)
-        # self.val_dataset = Subset(full_train_dataset, val_indices)
         self.train_dataset = ECG5000Dataset(
             root=self.data_roots, split="train", support_size=self.support_size, fold=self.fold
         )
@@ -361,9 +336,6 @@ class ECG5000FineTuneDataModule(TSPFNDataModule):
 
     def train_dataloader(self):
         return self._dataloader(self.train_dataset, shuffle=True, batch_size=self.batch_size)
-
-    # def val_dataloader(self):
-    #     return self._dataloader(self.val_dataset, shuffle=False, batch_size=self.test_batch_size)
 
     def test_dataloader(self):
         if self.test_batch_size is None:
@@ -436,67 +408,6 @@ class ESRDataModule(TSPFNDataModule):
         return self.val_dataloader()
 
 
-class ORCHIDDataModule(TSPFNDataModule):
-    """LightningDataModule for ORCHID dataset.
-
-    Parameters
-    - data_roots: root directory for data
-    - batch_size, num_workers, pin_memory: DataLoader args
-    - transform: optional callable applied to subsets
-    """
-
-    def __init__(
-        self,
-        data_roots: str,
-        subsets: Dict[Union[str, Subset], Union[str, Path]] = None,
-        num_workers: int = 0,
-        batch_size: int = 32,
-        test_batch_size: Optional[int] = None,
-        pin_memory: bool = True,
-        transform: Optional[Callable] = None,
-        seed: int = 42,
-        **kwargs,
-    ) -> None:
-        super().__init__(
-            data_roots=data_roots,
-            subsets=subsets,
-            num_workers=num_workers,
-            batch_size=batch_size,
-            test_batch_size=test_batch_size,
-            pin_memory=pin_memory,
-            transform=transform,
-            seed=seed,
-        )
-
-        print(f"num workers: {self.num_workers}")
-
-    def setup(self, stage: Optional[str] = None) -> None:
-        """Create datasets. Called on every process in distributed settings."""
-        self.train_dataset = ORCHIDDataset(
-            root=self.data_roots,
-            split="train",
-        )
-        # scaler = self.train_dataset.scaler
-        self.val_dataset = ORCHIDDataset(root=self.data_roots, split="val")
-
-        return
-
-    def train_dataloader(self):
-        return self._dataloader(self.train_dataset, shuffle=True, batch_size=len(self.train_dataset))
-
-    def val_dataloader(self):
-        if self.test_batch_size is None:
-            self.test_batch_size = len(self.val_dataset)
-        loaders = {
-            "val": self._dataloader(self.val_dataset, shuffle=False, batch_size=self.test_batch_size),
-            "train": self._dataloader(self.train_dataset, shuffle=False, batch_size=len(self.train_dataset)),
-        }
-        return CombinedLoader(loaders, mode="max_size_cycle")
-
-    def test_dataloader(self):
-        # This is identical to val_dataloader for the final evaluation
-        return self.val_dataloader()
-
 
 class EICUDatamodule(TSPFNDataModule):
     """LightningDataModule for EICU-CRD dataset.
@@ -544,7 +455,6 @@ class EICUDatamodule(TSPFNDataModule):
             support_size=self.support_size,
             fold=self.fold,
         )
-        # scaler = self.train_dataset.scaler
         self.val_dataset = EICUCRDDataset(root=self.data_roots, split="test")
 
         return
@@ -618,9 +528,6 @@ class EICUFineTuneDataModule(TSPFNDataModule):
     def train_dataloader(self):
         return self._dataloader(self.train_dataset, shuffle=True, batch_size=self.batch_size)
 
-    # def val_dataloader(self):
-    #     return self._dataloader(self.val_dataset, shuffle=False, batch_size=self.test_batch_size)
-
     def test_dataloader(self):
         if self.test_batch_size is None:
             self.test_batch_size = len(self.test_dataset)
@@ -673,76 +580,7 @@ class EOSDataModule(TSPFNDataModule):
             support_size=self.support_size,
             fold=self.fold,
         )
-        # scaler = self.train_dataset.scaler
         self.val_dataset = EOSDataset(root=self.data_roots, split="test")
-
-        return
-
-    def train_dataloader(self):
-        return self._dataloader(self.train_dataset, shuffle=True, batch_size=len(self.train_dataset))
-
-    def val_dataloader(self):
-        if self.test_batch_size is None:
-            self.test_batch_size = len(self.val_dataset)
-        loaders = {
-            "val": self._dataloader(self.val_dataset, shuffle=False, batch_size=self.test_batch_size),
-            "train": self._dataloader(self.train_dataset, shuffle=False, batch_size=len(self.train_dataset)),
-        }
-        return CombinedLoader(loaders, mode="max_size_cycle")
-
-    def test_dataloader(self):
-        # This is identical to val_dataloader for the final evaluation
-        return self.val_dataloader()
-
-
-class AtrialFibrillationDataModule(TSPFNDataModule):
-    """LightningDataModule for Atrial Fibrillation dataset.
-
-    Parameters
-    - data_roots: root directory for data
-    - batch_size, num_workers, pin_memory: DataLoader args
-    - transform: optional callable applied to subsets
-    """
-
-    def __init__(
-        self,
-        data_roots: str,
-        subsets: Dict[Union[str, Subset], Union[str, Path]] = None,
-        num_workers: int = 0,
-        batch_size: int = 32,
-        test_batch_size: Optional[int] = None,
-        support_size: Optional[int] = None,
-        fold: Optional[int] = None,
-        pin_memory: bool = True,
-        transform: Optional[Callable] = None,
-        seed: int = 42,
-        **kwargs,
-    ) -> None:
-        super().__init__(
-            data_roots=data_roots,
-            subsets=subsets,
-            num_workers=num_workers,
-            batch_size=batch_size,
-            test_batch_size=test_batch_size,
-            support_size=support_size,
-            fold=fold,
-            pin_memory=pin_memory,
-            transform=transform,
-            seed=seed,
-        )
-
-        print(f"num workers: {self.num_workers}")
-
-    def setup(self, stage: Optional[str] = None) -> None:
-        """Create datasets. Called on every process in distributed settings."""
-        self.train_dataset = AtrialFibrillationDataset(
-            root=self.data_roots,
-            split="train",
-            support_size=self.support_size,
-            fold=self.fold,
-        )
-        # scaler = self.train_dataset.scaler
-        self.val_dataset = AtrialFibrillationDataset(root=self.data_roots, split="test")
 
         return
 
@@ -809,7 +647,6 @@ class CPSCDataModule(TSPFNDataModule):
             support_size=self.support_size,
             fold=self.fold,
         )
-        # scaler = self.train_dataset.scaler
         self.val_dataset = CPSCDataset(root=self.data_roots, split="val")
 
         return
@@ -941,123 +778,6 @@ class EOSFineTuneDataModule(TSPFNDataModule):
         return self._dataloader(self.test_dataset, shuffle=False, batch_size=self.test_batch_size)
 
 
-class AtrialFibrillationFineTuneDataModule(TSPFNDataModule):
-    """LightningDataModule for ECG datasets during finetuning.
-
-    Parameters
-    - data_roots: root directory for data
-    - batch_size, num_workers, pin_memory: DataLoader args
-    - transform: optional callable applied to subsets
-    """
-
-    def __init__(
-        self,
-        data_roots: str,
-        subsets: Dict[Union[str, Subset], Union[str, Path]] = None,
-        num_workers: int = 0,
-        batch_size: int = 32,
-        test_batch_size: Optional[int] = None,
-        support_size: Optional[int] = None,
-        fold: Optional[int] = None,
-        pin_memory: bool = True,
-        transform: Optional[Callable] = None,
-        seed: int = 42,
-        **kwargs,
-    ) -> None:
-        super().__init__(
-            data_roots=data_roots,
-            subsets=subsets,
-            num_workers=num_workers,
-            batch_size=batch_size,
-            test_batch_size=test_batch_size,
-            support_size=support_size,
-            fold=fold,
-            pin_memory=pin_memory,
-            transform=transform,
-            seed=seed,
-        )
-
-        print(f"num workers: {self.num_workers}")
-        print(f"support size: {self.support_size}")
-
-    def setup(self, stage: Optional[str] = None) -> None:
-
-        self.train_dataset = AtrialFibrillationDataset(
-            root=self.data_roots, split="train", support_size=self.support_size, fold=self.fold
-        )
-        self.test_dataset = AtrialFibrillationDataset(root=self.data_roots, split="test")
-
-    def train_dataloader(self):
-        return self._dataloader(self.train_dataset, shuffle=True, batch_size=self.batch_size)
-
-    def test_dataloader(self):
-        if self.test_batch_size is None:
-            self.test_batch_size = len(self.test_dataset)
-        return self._dataloader(self.test_dataset, shuffle=False, batch_size=self.test_batch_size)
-
-
-class BlinkDataModule(TSPFNDataModule):
-    """LightningDataModule for Blink dataset.
-
-    Parameters
-    - data_roots: root directory for data
-    - batch_size, num_workers, pin_memory: DataLoader args
-    - transform: optional callable applied to subsets
-    """
-
-    def __init__(
-        self,
-        data_roots: str,
-        subsets: Dict[Union[str, Subset], Union[str, Path]] = None,
-        num_workers: int = 0,
-        batch_size: int = 32,
-        test_batch_size: Optional[int] = None,
-        pin_memory: bool = True,
-        transform: Optional[Callable] = None,
-        seed: int = 42,
-        **kwargs,
-    ) -> None:
-        super().__init__(
-            data_roots=data_roots,
-            subsets=subsets,
-            num_workers=num_workers,
-            batch_size=batch_size,
-            test_batch_size=test_batch_size,
-            pin_memory=pin_memory,
-            transform=transform,
-            seed=seed,
-        )
-
-        print(f"num workers: {self.num_workers}")
-
-    def setup(self, stage: Optional[str] = None) -> None:
-        """Create datasets. Called on every process in distributed settings."""
-        self.train_dataset = BlinkDataset(
-            root=self.data_roots,
-            split="train",
-        )
-        # scaler = self.train_dataset.scaler
-        self.val_dataset = BlinkDataset(root=self.data_roots, split="test")
-
-        return
-
-    def train_dataloader(self):
-        return self._dataloader(self.train_dataset, shuffle=True, batch_size=len(self.train_dataset))
-
-    def val_dataloader(self):
-        if self.test_batch_size is None:
-            self.test_batch_size = len(self.val_dataset)
-        loaders = {
-            "val": self._dataloader(self.val_dataset, shuffle=False, batch_size=self.test_batch_size),
-            "train": self._dataloader(self.train_dataset, shuffle=False, batch_size=len(self.train_dataset)),
-        }
-        return CombinedLoader(loaders, mode="max_size_cycle")
-
-    def test_dataloader(self):
-        # This is identical to val_dataloader for the final evaluation
-        return self.val_dataloader()
-
-
 class ESRFineTuneDataModule(TSPFNDataModule):
     """LightningDataModule for ESR datasets during finetuning.
 
@@ -1114,68 +834,6 @@ class ESRFineTuneDataModule(TSPFNDataModule):
         if self.test_batch_size is None:
             self.test_batch_size = len(self.test_dataset)
         return self._dataloader(self.test_dataset, shuffle=False, batch_size=self.test_batch_size)
-
-
-class ABIDEDataModule(TSPFNDataModule):
-    """LightningDataModule for ABIDE dataset.
-
-    Parameters
-    - data_roots: root directory for data
-    - batch_size, num_workers, pin_memory: DataLoader args
-    - transform: optional callable applied to subsets
-    """
-
-    def __init__(
-        self,
-        data_roots: str,
-        subsets: Dict[Union[str, Subset], Union[str, Path]] = None,
-        num_workers: int = 0,
-        batch_size: int = 32,
-        pin_memory: bool = True,
-        transform: Optional[Callable] = None,
-        seed: int = 42,
-        **kwargs,
-    ) -> None:
-        super().__init__(
-            data_roots=data_roots,
-            subsets=subsets,
-            num_workers=num_workers,
-            batch_size=batch_size,
-            pin_memory=pin_memory,
-            transform=transform,
-            seed=seed,
-        )
-
-        print(f"num workers: {self.num_workers}")
-
-    def setup(self, stage: Optional[str] = None) -> None:
-        """Create datasets. Called on every process in distributed settings."""
-        self.train_dataset = ABIDEDataset(
-            root=self.data_roots,
-            split="train",
-        )
-        self.val_dataset = ABIDEDataset(
-            root=self.data_roots,
-            split="test",
-        )
-
-        return
-
-    def train_dataloader(self):
-        return self._dataloader(self.train_dataset, shuffle=True, batch_size=len(self.train_dataset))
-
-    def val_dataloader(self):
-        if self.test_batch_size is None:
-            self.test_batch_size = len(self.val_dataset)
-        loaders = {
-            "val": self._dataloader(self.val_dataset, shuffle=False, batch_size=self.test_batch_size),
-            "train": self._dataloader(self.train_dataset, shuffle=False, batch_size=len(self.train_dataset)),
-        }
-        return CombinedLoader(loaders, mode="max_size_cycle")
-
-    def test_dataloader(self):
-        # This is identical to val_dataloader for the final evaluation
-        return self.val_dataloader()
 
 
 class FineTuneTUEVDataModule(TSPFNDataModule):
@@ -1402,7 +1060,6 @@ class StratifiedFineTuneTUEVDataModule(TSPFNDataModule):
         labels = []
         for label in tqdm(dataset, total=len(dataset), desc=f"Extracting labels for {stage} set"):
             labels.append(label[1])
-        # labels = [label for _, label in dataset]
         print(f"Class distribution in {stage} set: {pd.Series(labels).value_counts().to_dict()}")
         sampler = StratifiedBatchSampler(labels, batch_size=self.batch_size)
         return sampler
