@@ -4,7 +4,7 @@ defaults:
 _target_: data.data_module.ECG5000DataModule
 data_roots: ${oc.env:ECG5000_DATA_PATH}
 time_series_length: 140
-num_channels: null
+num_channels: 1
 num_classes: 5
 
 predict_losses:

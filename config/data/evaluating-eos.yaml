@@ -4,7 +4,7 @@ defaults:
 _target_: data.data_module.EOSDataModule
 data_roots: ${oc.env:EOS_DATA_PATH}
 time_series_length: 128
-num_channels: null
+num_channels: 3
 num_classes: 2
 
 predict_losses:

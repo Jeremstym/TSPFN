@@ -4,7 +4,7 @@ defaults:
 _target_: data.data_module.CPSCDataModule
 data_roots: ${oc.env:CPSC_DATA_PATH}
 time_series_length: 125
-num_channels: null
+num_channels: 4
 num_classes: 4
 
 predict_losses:
