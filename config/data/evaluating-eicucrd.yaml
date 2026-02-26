@@ -4,9 +4,8 @@ defaults:
 _target_: data.data_module.EICUDatamodule
 data_roots: ${oc.env:EICU_DATA_PATH}
 time_series_length: 100
-num_channels: null
+num_channels: 5
 num_classes: 2
-time_points: null
 predict_losses:
   classification:
     _target_: torch.nn.BCEWithLogitsLoss

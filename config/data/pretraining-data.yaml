@@ -133,22 +133,8 @@ val_datasets:
     root: ${oc.env:FIVECHANS_PTB_DATA_PATH}
     split: val
 
-# test_datasets:
-#   2ChannelTUAB:
-#     _target_: data.pretraining_datasets.TUAB2ChannelDataset
-#     root: ${oc.env:TWOCHANS_TUAB_DATA_PATH}
-#     split: test
-#   2ChannelTUEV:
-#     _target_: data.pretraining_datasets.TUEV2ChannelDataset
-#     root: ${oc.env:TWOCHANS_TUEV_DATA_PATH}
-#     split: test
-#   2ChannelPTB:
-#     _target_: data.pretraining_datasets.PTB2ChannelDataset
-#     root: ${oc.env:TWOCHANS_PTB_DATA_PATH}
-#     split: test
 meta_batch_size: 1
 chunk_size: 5000
 num_workers: 4
 num_channels: null
 sequence_length: ${data.chunk_size} # For the TSPFN encoder, the sequence length is determined by the chunk size (number of time points per chunk)
-time_points: null # Number of time points in the input time series data (excluding the class token)

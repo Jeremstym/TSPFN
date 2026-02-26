@@ -17,4 +17,3 @@ embed_dim: ${task.embed_dim} # Embedding dimension for the TSPFN encoder
 positional_encoding: ${task.time_series_positional_encoding} # Type of positional encoding to use for time series data: "none", "sinusoidal", "rope", "learned"
 use_tabpfn_pe: True # Whether to use the original TabPFN positional encodings in addition to any time series positional encodings (only applicable if positional_encoding is "cwpe" or "cwpe+rope")
 num_channels: ${data.num_channels} # Number of input channels for the TSPFN encoder
-time_points: ${data.time_points} # Number of time points in the input time series data (excluding the class token)
