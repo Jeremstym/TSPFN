@@ -5,7 +5,7 @@
 First, download the project's code:
 ```shell script
 # clone project
-git clone url
+git clone https://github.com/Jeremstym/TSPFN.git
 ```
 
 Next you have to install the project and its dependencies. The project's dependency management and packaging is handled
