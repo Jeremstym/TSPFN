@@ -1,2 +1,0 @@
-_target_: tspfn.foundationals.labram.TimeSeriesLabramEncoder
-pretrained_weights: "path/to/folder/ckpts/labram-base.pth"

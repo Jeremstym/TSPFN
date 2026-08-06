@@ -32,7 +32,6 @@ from torchmetrics import MetricCollection
 
 from data.utils.decorators import auto_move_data
 from tspfn.system import TSPFNSystem
-from tspfn.foundationals.labram import TimeSeriesLabramEncoder
 from tspfn.foundationals.convolution import TimeSeriesConvolutionTokenizer
 from tspfn.utils import get_sizes_per_class, stratified_batch_split, half_batch_split, z_scoring, z_scoring_per_channel
 
@@ -50,7 +49,7 @@ class TSPFNEvaluating(TSPFNSystem):
         time_series_positional_encoding: Literal["none", "sinusoidal", "learned"] = "none",
         time_series_num_channels: int = 16,
         time_series_length: int = 1000,
-        channel_handler: Literal["average", "flatten", "convolution", "labram"] = None,
+        channel_handler: Literal["average", "flatten", "convolution"] = None,
         num_classes: int = 10,
         *args,
         **kwargs,
@@ -138,10 +137,6 @@ class TSPFNEvaluating(TSPFNSystem):
             self.ts_tokenizer = TimeSeriesConvolutionTokenizer(
                 ts_size=time_series_length,
                 ts_num_channels=time_series_num_channels,
-            )
-        elif channel_handler == "labram":
-            self.ts_tokenizer = TimeSeriesLabramEncoder(
-                pretrained_weights="/path/to/folder/ckpts/labram-base.pth",
             )
         elif channel_handler == "average":
             self.ts_tokenizer = lambda x, input_chans: x.mean(dim=1)  # Average over channels
