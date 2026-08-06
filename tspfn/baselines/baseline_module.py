@@ -32,7 +32,6 @@ from torchmetrics import MetricCollection
 
 from data.utils.decorators import auto_move_data
 from tspfn.system import TSPFNSystem
-from tspfn.foundationals.convolution import TimeSeriesConvolutionTokenizer
 from tspfn.utils import get_sizes_per_class, MulticlassFaiss, SingleclassFaiss, stratified_batch_split, half_batch_split
 
 logger = logging.getLogger(__name__)
@@ -47,7 +46,7 @@ class BaselineModule(TSPFNSystem):
         predict_losses: Optional[Dict[str, Callable[[Tensor, Tensor], Tensor]] | DictConfig] = None,
         time_series_num_channels: int = 16,
         time_series_length: int = 1000,
-        channel_handler: Literal["average", "flatten", "convolution"] = None,
+        channel_handler: Literal["average", "flatten"] = None,
         num_classes: int = 10,
         baseline_name: Literal["others", "minirocket"] = "others",
         *args,
@@ -121,12 +120,7 @@ class BaselineModule(TSPFNSystem):
                 ),
             }
         )
-        if channel_handler == "convolution":
-            self.ts_tokenizer = TimeSeriesConvolutionTokenizer(
-                ts_size=time_series_length,
-                ts_num_channels=time_series_num_channels,
-            )
-        elif channel_handler == "average":
+        if channel_handler == "average":
             self.ts_tokenizer = lambda x, input_chans: x.mean(dim=1)  # Average over channels
         elif channel_handler == "flatten":
             self.ts_tokenizer = lambda x, input_chans: x.view(x.size(0), -1)  # Flatten all channels
