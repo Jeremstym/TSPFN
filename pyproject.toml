@@ -71,7 +71,7 @@ types-tqdm = "^4.67.0.20250516"
 types-seaborn = "^0.13.2.20250728"
 
 [tool.poetry.scripts]
-tspfn-pretrain = "tspfn.runner:main"
+tspfn-run = "tspfn.runner:main"
 
 [[tool.poetry.source]]
 name = "pytorch-cu118"
