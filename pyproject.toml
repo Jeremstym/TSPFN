@@ -2,10 +2,10 @@
 name = "tspfn"
 version = "0.1.0"
 description = "Pretraining Time-Series PFN models with incontext learning tasks and real world datasets"
-authors = ["XXXX <xxxx@xxxxx>"]
+authors = ["Jérémie Stym-Popper <stympopper@isir.upmc.fr>"]
 license = "Apache-2.0"
 readme = "README.md"
-repository = "xxxxxx"
+repository = "https://github.com/Jeremstym/TSPFN"
 classifiers=[
     "Environment :: Console",
     "Natural Language :: English",
@@ -28,7 +28,7 @@ hydra-joblib-launcher = "*"
 holoviews = { version = "*", extras = ["recommended"] }
 numba = "^0.59.0"   # as to be manually pinned to avoid resolver picking a too old version w/o pre-build llvmlite dep
 numpy = "^1.22"
- pandas = "*"
+pandas = "*"
 torchmetrics = "*"
 PyYAML = "*"
 matplotlib = "*"
