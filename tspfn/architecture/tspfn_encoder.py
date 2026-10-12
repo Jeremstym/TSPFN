@@ -255,8 +255,9 @@ class TSPFNEncoder(nn.Module, ABC):
             num_channels, seq_len, num_features, embed_dim = X_full.shape
             batch_size = 1  # If already tokenized, we assume batch size of 1 for simplicity
         if num_features % self.features_per_group_patch != 0:
-            X_full = F.pad(X_full, (0, 0, 0, 0, 0, self.features_per_group_patch - (num_features % self.features_per_group_patch)), "constant", 0)
+            X_full = F.pad(X_full, (0, 0, 0, 0, self.features_per_group_patch - (num_features % self.features_per_group_patch)), "constant", 0)
             num_features = X_full.shape[-1]
+            print(f"Padded input X to shape: {X_full.shape} to make num_features divisible by features_per_group_patch={self.features_per_group_patch}")
 
         num_features = num_features // self.features_per_group_patch  # Adjust for features per group
         if self.positional_encoding == "rope" or self.positional_encoding == "cwpe+rope":
