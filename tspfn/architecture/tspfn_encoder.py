@@ -24,7 +24,7 @@ class TSPFNEncoder(nn.Module, ABC):
         self,
         seed: int,
         tabpfn_kwargs: dict,
-        features_per_group: int,
+        features_per_group_patch: int,
         embed_dim: int,
         updated_pfn_path: Union[Path, None] = None,
         random_init: bool = False,
@@ -113,7 +113,7 @@ class TSPFNEncoder(nn.Module, ABC):
         self.transformer_encoder = model.transformer_encoder
         unbound_func = model.__class__.add_embeddings
         self.add_embeddings = types.MethodType(unbound_func, self)
-        self.features_per_group = features_per_group  # 1 for TabPFN v2, 3 for TabPFN v2.5
+        self.features_per_group_patch = features_per_group_patch  # 1 for TabPFN v2, 3 for TabPFN v2.5
         # self.recompute_layer = recompute_layer
         self.num_channels = num_channels
         self.time_points = time_points
@@ -197,7 +197,7 @@ class TSPFNEncoder(nn.Module, ABC):
         y = y.transpose(0, 1)  # (B, Seq, 1)
 
         if not already_tokenized:
-            X = einops.rearrange(X, "s b (f n) -> b s f n", n=self.features_per_group)
+            X = einops.rearrange(X, "s b (f n) -> b s f n", n=self.features_per_group_patch)
         else:
             X = einops.rearrange(X, "s b f e -> b s f e")
 
@@ -266,7 +266,7 @@ class TSPFNEncoder(nn.Module, ABC):
         else:
             X_full = X_full.transpose(0, 1)  # (C, Seq, F, E) -> (Seq, C, F, E)
             X_full = X_full.unsqueeze(1)  # (Seq, 1, C, F, E)
-            X_full = X_full.view(seq_len, 1, num_channels * num_features * self.features_per_group, embed_dim)  # (Seq, B, C*T, E)
+            X_full = X_full.view(seq_len, 1, num_channels * num_features * self.features_per_group_patch, embed_dim)  # (Seq, B, C*T, E)
             emb_x, emb_y, single_eval_pos = self.encode_x_and_y(X_full, y_train, already_tokenized=True)
 
         if self.positional_encoding == "none" or self.positional_encoding == "rope":
