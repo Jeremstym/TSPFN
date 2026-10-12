@@ -253,7 +253,7 @@ class TSPFNEncoder(nn.Module, ABC):
             num_channels, seq_len, num_features, embed_dim = X_full.shape
             batch_size = 1  # If already tokenized, we assume batch size of 1 for simplicity
         
-        num_features = num_features // self.features_per_group  # Adjust for features per group
+        num_features = num_features // self.features_per_group_patch  # Adjust for features per group
         if self.positional_encoding == "rope" or self.positional_encoding == "cwpe+rope":
             for layer in self.transformer_encoder.layers:
                 layer.self_attn_between_features.time_points = num_features * num_channels
