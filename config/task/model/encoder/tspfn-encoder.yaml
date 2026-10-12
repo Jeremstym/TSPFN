@@ -7,7 +7,7 @@ tabpfn_kwargs:
 updated_pfn_path: ${updated_pfn_path} # Path to updated TabPFN model weights after pretraining
 random_init: False # Whether to randomly initialize the TabPFN weights instead of loading pretrained weights
 recompute_layer: True
-features_per_group_patch: 1
+features_per_group_patch: 2
 n_out: 10
 cache_trainset_representation: False
 embed_dim: ${task.embed_dim} # Embedding dimension for the TSPFN encoder
