@@ -7,7 +7,6 @@ from abc import ABC
 import einops
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from functools import partial
 import types
 from tabpfn.model_loading import load_model_criterion_config
@@ -248,23 +247,22 @@ class TSPFNEncoder(nn.Module, ABC):
         self, X_full: torch.Tensor, y_train: torch.Tensor, already_tokenized: bool = False, *args, **kwargs
     ) -> Tuple[torch.torch.Tensor, torch.torch.Tensor]:
 
+
         if not already_tokenized:
             seq_len, batch_size, num_channels, num_features = X_full.shape
         else:
             num_channels, seq_len, num_features, embed_dim = X_full.shape
             batch_size = 1  # If already tokenized, we assume batch size of 1 for simplicity
-        
+        if num_features % self.features_per_group_patch != 0:
+            X_full = F.pad(X_full, (0, 0, 0, 0, 0, self.features_per_group_patch - (num_features % self.features_per_group_patch)), "constant", 0)
+            num_features = X_full.shape[-1]
+            
         num_features = num_features // self.features_per_group_patch  # Adjust for features per group
         if self.positional_encoding == "rope" or self.positional_encoding == "cwpe+rope":
             for layer in self.transformer_encoder.layers:
                 layer.self_attn_between_features.time_points = num_features * num_channels
                 layer.self_attn_between_features.num_channels = num_channels
 
-        pad_features = (-num_features) % self.features_per_group_patch
-        if pad_features > 0:
-            X_full = F.pad(X_full, (0, 0, 0, pad_features), "constant", 0)
-            num_features += pad_features
-        
         # Flatten on channels and/or tokenize
         if not already_tokenized:
             print(f"Input X shape before encoding: {X_full.shape}")
