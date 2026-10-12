@@ -1,13 +1,13 @@
 _target_: tspfn.architecture.tspfn_encoder.TSPFNEncoder
 seed: ${seed}
 tabpfn_kwargs:
-  features_per_group: 1
+  features_per_group: 2
   max_num_classes: 10
   num_buckets: 100
 updated_pfn_path: ${updated_pfn_path} # Path to updated TabPFN model weights after pretraining
 random_init: False # Whether to randomly initialize the TabPFN weights instead of loading pretrained weights
 recompute_layer: True
-features_per_group: 1
+features_per_group: 2
 n_out: 10
 cache_trainset_representation: False
 embed_dim: ${task.embed_dim} # Embedding dimension for the TSPFN encoder
