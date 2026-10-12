@@ -10,6 +10,9 @@ from torch.nn import functional as F
 from torch.nn import init
 
 from tabpfn.model_loading import load_model_criterion_config
+from tabpfn.architectures.base.transformer import PerFeatureTransformer
+from tabpfn.architectures.base import get_encoder, get_y_encoder, parse_config
+from tabpfn.architectures.base.config import ModelConfig
 
 import logging
 
@@ -35,7 +38,38 @@ class PFNPredictionHead(nn.Module):
             out_features: Number of features to output.
         """
         super().__init__()
-        model, _, _= load_model_criterion_config(**tabpfn_kwargs)
+        config, _ = parse_config(tabpfn_kwargs)
+        model = PerFeatureTransformer(
+            config=config,
+            # Things that were explicitly passed inside `build_model()`
+            encoder=get_encoder(
+                num_features=config.features_per_group,
+                embedding_size=config.emsize,
+                remove_empty_features=config.remove_empty_features,
+                remove_duplicate_features=config.remove_duplicate_features,
+                nan_handling_enabled=config.nan_handling_enabled,
+                normalize_on_train_only=config.normalize_on_train_only,
+                normalize_to_ranking=config.normalize_to_ranking,
+                normalize_x=config.normalize_x,
+                remove_outliers=config.remove_outliers,
+                normalize_by_used_features=config.normalize_by_used_features,
+                encoder_use_bias=config.encoder_use_bias,
+            ),
+            y_encoder=get_y_encoder(
+                num_inputs=1,
+                embedding_size=config.emsize,
+                nan_handling_y_encoder=config.nan_handling_y_encoder,
+                max_num_classes=config.max_num_classes,
+            ),
+            cache_trainset_representation=cache_trainset_representation,
+            use_encoder_compression_layer=False,
+            n_out=n_out,
+            #
+            # These are things that had default values from config.get() but were not
+            # present in any config.
+            layer_norm_with_elementwise_affine=False,
+        )
+
         self.n_classes = num_classes
         
         if random_init:
