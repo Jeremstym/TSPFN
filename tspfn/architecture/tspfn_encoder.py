@@ -10,6 +10,9 @@ import torch.nn as nn
 from functools import partial
 import types
 from tabpfn.model_loading import load_model_criterion_config
+from tabpfn.architectures.base.transformer import PerFeatureTransformer
+from tabpfn.architectures.base import get_encoder, get_y_encoder, parse_config
+from tabpfn.architectures.base.config import ModelConfig
 from tspfn.architecture.pe_utils import rope_compute_heads_wrapper, interpolate_pos_encoding
 from tabpfn.architectures.base.attention.full_attention import MultiHeadAttention
 
@@ -25,11 +28,13 @@ class TSPFNEncoder(nn.Module, ABC):
         embed_dim: int,
         updated_pfn_path: Union[Path, None] = None,
         random_init: bool = False,
-        recompute_layer: bool = True,
+        # recompute_layer: bool = True,
         num_channels: int = None,
         time_points: int = None,
         use_tabpfn_pe: bool = True,
         positional_encoding: Literal["none", "sinusoidal", "rope", "learned", "cwpe", "cwpe+rope"] = "none",
+        cache_trainset_representation: bool = False,
+        n_out: int = 10,
         **kwargs,
     ):
         super().__init__()
@@ -38,7 +43,38 @@ class TSPFNEncoder(nn.Module, ABC):
         self.cwpe = nn.Embedding(5, embed_dim)
         nn.init.normal_(self.cwpe.weight, mean=0, std=embed_dim**-0.5)
 
-        model, _, model_config = load_model_criterion_config(**tabpfn_kwargs)
+        # model, _, model_config = load_model_criterion_config(**tabpfn_kwargs)
+        config = parse_config(tabpfn_kwargs)
+        model = PerFeatureTransformer(
+            config=config,
+            # Things that were explicitly passed inside `build_model()`
+            encoder=get_encoder(
+                num_features=config.features_per_group,
+                embedding_size=config.emsize,
+                remove_empty_features=config.remove_empty_features,
+                remove_duplicate_features=config.remove_duplicate_features,
+                nan_handling_enabled=config.nan_handling_enabled,
+                normalize_on_train_only=config.normalize_on_train_only,
+                normalize_to_ranking=config.normalize_to_ranking,
+                normalize_x=config.normalize_x,
+                remove_outliers=config.remove_outliers,
+                normalize_by_used_features=config.normalize_by_used_features,
+                encoder_use_bias=config.encoder_use_bias,
+            ),
+            y_encoder=get_y_encoder(
+                num_inputs=1,
+                embedding_size=config.emsize,
+                nan_handling_y_encoder=config.nan_handling_y_encoder,
+                max_num_classes=config.max_num_classes,
+            ),
+            cache_trainset_representation=cache_trainset_representation,
+            use_encoder_compression_layer=False,
+            n_out=n_out,
+            #
+            # These are things that had default values from config.get() but were not
+            # present in any config.
+            layer_norm_with_elementwise_affine=False,
+        )
         
         if random_init:  # random_init:
             model.apply(self._init_weights)
@@ -78,7 +114,7 @@ class TSPFNEncoder(nn.Module, ABC):
         unbound_func = model.__class__.add_embeddings
         self.add_embeddings = types.MethodType(unbound_func, self)
         self.features_per_group = features_per_group  # 1 for TabPFN v2, 3 for TabPFN v2.5
-        self.recompute_layer = recompute_layer
+        # self.recompute_layer = recompute_layer
         self.num_channels = num_channels
         self.time_points = time_points
         self.positional_encoding = positional_encoding
