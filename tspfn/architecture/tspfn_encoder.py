@@ -248,10 +248,6 @@ class TSPFNEncoder(nn.Module, ABC):
         self, X_full: torch.Tensor, y_train: torch.Tensor, already_tokenized: bool = False, *args, **kwargs
     ) -> Tuple[torch.torch.Tensor, torch.torch.Tensor]:
 
-        pad_features = (-num_features) % self.features_per_group_patch
-        if pad_features > 0:
-            X_full = F.pad(X_full, (0, 0, 0, pad_features), "constant", 0)
-        
         if not already_tokenized:
             seq_len, batch_size, num_channels, num_features = X_full.shape
         else:
@@ -264,6 +260,11 @@ class TSPFNEncoder(nn.Module, ABC):
                 layer.self_attn_between_features.time_points = num_features * num_channels
                 layer.self_attn_between_features.num_channels = num_channels
 
+        pad_features = (-num_features) % self.features_per_group_patch
+        if pad_features > 0:
+            X_full = F.pad(X_full, (0, 0, 0, pad_features), "constant", 0)
+            num_features += pad_features
+        
         # Flatten on channels and/or tokenize
         if not already_tokenized:
             print(f"Input X shape before encoding: {X_full.shape}")
