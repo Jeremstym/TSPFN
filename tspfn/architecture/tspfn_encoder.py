@@ -8,6 +8,7 @@ import einops
 import torch
 import torch.nn as nn
 from functools import partial
+import types
 from tabpfn.model_loading import load_model_criterion_config
 from tspfn.architecture.pe_utils import rope_compute_heads_wrapper, interpolate_pos_encoding
 from tabpfn.architectures.base.attention.full_attention import MultiHeadAttention
@@ -33,44 +34,56 @@ class TSPFNEncoder(nn.Module, ABC):
     ):
         super().__init__()
 
-        self.channel_positional_encoding = nn.Parameter(torch.zeros(1, 5, 1, embed_dim)) # Leave 5 hardcoded
+        self.channel_positional_encoding = nn.Parameter(torch.zeros(1, 5, 1, embed_dim))  # Leave 5 hardcoded
         self.cwpe = nn.Embedding(5, embed_dim)
         nn.init.normal_(self.cwpe.weight, mean=0, std=embed_dim**-0.5)
 
-        list_model, _, self.model_config, _ = load_model_criterion_config(**tabpfn_kwargs)
-        self.model = list_model[0]
+        model, _, model_config = load_model_criterion_config(**tabpfn_kwargs)
+        
+        if random_init:  # random_init:
+            model.apply(self._init_weights)
+            logging.info("Randomly initialized TabPFN model weights")
+        else:
+            logging.info("Loaded pretrained TabPFN model weights")
+
         if updated_pfn_path is not None:
             # Load updated model weights after pretraining
             logging.info(f"Loading updated TabPFN model weights from {updated_pfn_path}")
             state_dict = torch.load(updated_pfn_path, map_location="cuda:0")  # updated_pfn_path is already a state dict
             if positional_encoding == "learned" and "pe" in state_dict:
-                pe_state = state_dict.pop("pe")
                 with torch.no_grad():
-                    self.pe.copy_(pe_state)
+                    self.pe.copy_(state_dict["pe"])
             if "channel_positional_encoding" in state_dict:
-                channel_pe_state = state_dict.pop("channel_positional_encoding")
                 with torch.no_grad():
-                    self.channel_positional_encoding.copy_(channel_pe_state)
+                    self.channel_positional_encoding.copy_(state_dict["channel_positional_encoding"])
             if "cwpe.weight" in state_dict:
-                cwpe_state = state_dict.pop("cwpe.weight")
                 with torch.no_grad():
-                    self.cwpe.weight.copy_(cwpe_state)
-            self.model.load_state_dict(state_dict, strict=True)
+                    self.cwpe.weight.copy_(state_dict["cwpe.weight"])
+                    
+            # Filter out custom parameters so strict=True ignores them cleanly
+            clean_state_dict = {
+                k: v for k, v in state_dict.items() 
+                if k not in ["pe", "channel_positional_encoding", "cwpe.weight", "cwpe"]
+            }
+        
+            model.load_state_dict(clean_state_dict, strict=True)
 
-        self.encoder = self.model.encoder
-        self.y_encoder = self.model.y_encoder
-        self.transformer_encoder = self.model.transformer_encoder
+        self.feature_positional_embedding = getattr(model, "feature_positional_embedding", None)
+        self.feature_positional_embedding_embeddings = getattr(model, "feature_positional_embedding_embeddings", None)
+        self.dag_pos_enc_dim = getattr(model, "dag_pos_enc_dim", None)
+        self.seed = seed
+        self.encoder = model.encoder
+        self.y_encoder = model.y_encoder
+        self.transformer_encoder = model.transformer_encoder
+        unbound_func = model.__class__.add_embeddings
+        self.add_embeddings = types.MethodType(unbound_func, self)
         self.features_per_group = features_per_group  # 1 for TabPFN v2, 3 for TabPFN v2.5
         self.recompute_layer = recompute_layer
-
-        # Use time points and num channels as placeholder. They will be updated dynamically 
-        # in the forward pass based on the input data dimensions
         self.num_channels = num_channels
         self.time_points = time_points
         self.positional_encoding = positional_encoding
         self.use_tabpfn_pe = use_tabpfn_pe
         self.embed_dim = embed_dim
-
 
         print(f"---------Using positional encoding: {self.positional_encoding}---------")
 
@@ -101,13 +114,6 @@ class TSPFNEncoder(nn.Module, ABC):
             for layer in self.transformer_encoder.layers:
                 layer.self_attn_between_features.is_feature_attn = True
                 layer.self_attn_between_items.is_feature_attn = False
-
-
-        if random_init:  # random_init:
-            self.model.apply(self._init_weights)
-            logging.info("Randomly initialized TabPFN model weights")
-        else:
-            logging.info("Loaded pretrained TabPFN model weights")
 
     def _init_weights(self, module):
         # Initialize Linear layers (with or without bias)
@@ -144,6 +150,7 @@ class TSPFNEncoder(nn.Module, ABC):
         self,
         X: torch.Tensor,
         y: torch.Tensor,
+        already_tokenized: bool = False
     ) -> Tuple[torch.Tensor, torch.Tensor, int]:
         single_eval_pos_ = y.shape[0]
         if y.ndim == 1:
@@ -153,7 +160,11 @@ class TSPFNEncoder(nn.Module, ABC):
 
         y = y.transpose(0, 1)  # (B, Seq, 1)
 
-        X = einops.rearrange(X, "s b (f n) -> b s f n", n=self.features_per_group)
+        if not already_tokenized:
+            X = einops.rearrange(X, "s b (f n) -> b s f n", n=self.features_per_group)
+        else:
+            X = einops.rearrange(X, "s b f e -> b s f e")
+
         y = torch.cat(
             (
                 y,
@@ -180,35 +191,51 @@ class TSPFNEncoder(nn.Module, ABC):
 
         assert not torch.isnan(embedded_y).any(), f"{torch.isnan(embedded_y).any()=}, Make sure to add nan handlers"
 
-        X = einops.rearrange(X, "b s f n -> s (b f) n")
-        embedded_x = einops.rearrange(
-            self.encoder(
-                {"main": X},
-                single_eval_pos=single_eval_pos_,
-                cache_trainset_representation=False,
-            ),
-            "s (b f) e -> b s f e",
-            b=embedded_y.shape[0],
-        )
+        if not already_tokenized:
+            X = einops.rearrange(X, "b s f n -> s (b f) n")
+            print(f"Input X shape before encoding: {X.shape}")
+            embedded_x = einops.rearrange(
+                self.encoder(
+                    {"main": X},
+                    single_eval_pos=single_eval_pos_,
+                    cache_trainset_representation=False,
+                ),
+                "s (b f) e -> b s f e",
+                b=embedded_y.shape[0],
+            )
+        else:
+            embedded_x = X
         return embedded_x, embedded_y, single_eval_pos_
 
     def forward(
-        self, X_full: torch.Tensor, y_train: torch.Tensor, *args, **kwargs
+        self, X_full: torch.Tensor, y_train: torch.Tensor, already_tokenized: bool = False, *args, **kwargs
     ) -> Tuple[torch.torch.Tensor, torch.torch.Tensor]:
 
-        seq_len, batch_size, num_channels, num_features = X_full.shape
+        if not already_tokenized:
+            seq_len, batch_size, num_channels, num_features = X_full.shape
+        else:
+            num_channels, seq_len, num_features, embed_dim = X_full.shape
+            batch_size = 1  # If already tokenized, we assume batch size of 1 for simplicity
+        
+        num_features = num_features // self.features_per_group  # Adjust for features per group
         if self.positional_encoding == "rope" or self.positional_encoding == "cwpe+rope":
             for layer in self.transformer_encoder.layers:
                 layer.self_attn_between_features.time_points = num_features * num_channels
                 layer.self_attn_between_features.num_channels = num_channels
-        
-        # Flatten on channels
-        X_full = X_full.view(seq_len, batch_size, num_channels * num_features)  # (Seq, B, C*F)
-        emb_x, emb_y, single_eval_pos = self.encode_x_and_y(X_full, y_train)
+
+        # Flatten on channels and/or tokenize
+        if not already_tokenized:
+            X_full = X_full.view(seq_len, batch_size, num_channels * num_features * self.features_per_group)  # (Seq, B, C*F)
+            emb_x, emb_y, single_eval_pos = self.encode_x_and_y(X_full, y_train)
+        else:
+            X_full = X_full.transpose(0, 1)  # (C, Seq, F, E) -> (Seq, C, F, E)
+            X_full = X_full.unsqueeze(1)  # (Seq, 1, C, F, E)
+            X_full = X_full.view(seq_len, 1, num_channels * num_features * self.features_per_group, embed_dim)  # (Seq, B, C*T, E)
+            emb_x, emb_y, single_eval_pos = self.encode_x_and_y(X_full, y_train, already_tokenized=True)
 
         if self.positional_encoding == "none" or self.positional_encoding == "rope":
             # Use PE from TabPFN model
-            emb_x, emb_y = self.model.add_embeddings(
+            emb_x, emb_y = self.add_embeddings(
                 emb_x,
                 emb_y,
                 data_dags=None,
@@ -219,23 +246,23 @@ class TSPFNEncoder(nn.Module, ABC):
         elif self.positional_encoding == "cwpe+rope" or self.positional_encoding == "cwpe":
             # Use PE from TabPFN model and add channel-wise positional encodings
             if self.use_tabpfn_pe:
-                emb_x, emb_y = self.model.add_embeddings(
+                emb_x, emb_y = self.add_embeddings(
                     emb_x,
                     emb_y,
                     data_dags=None,
                     num_features=num_features,
                     seq_len=seq_len,
                 )
-            # Add channel-wise positional encodings
             emb_x = emb_x.reshape(batch_size, seq_len, num_channels, num_features, self.embed_dim)  # (B, Seq, C, L, E)
             if num_channels <= 5:
                 channel_indices = torch.arange(num_channels, device=emb_x.device)  # (C,)
                 channel_pe = self.cwpe(channel_indices)  # (C, E)
                 channel_pe = channel_pe.view(1, 1, num_channels, 1, self.embed_dim)  # (1, 1, C, 1, E)
             elif num_channels > 5:
-                # Repeat the learned positional encodings for more channels
                 channel_pe = self.cwpe.weight[:5, :].view(1, 1, 5, 1, self.embed_dim)  # (1, 1, 5, 1, E)
-                channel_pe = channel_pe.repeat(1, 1, num_channels // 5 + 1, 1, 1)[:, :, :num_channels, :, :]  # (1, 1, C, 1, E)
+                channel_pe = channel_pe.repeat(1, 1, num_channels // 5 + 1, 1, 1)[
+                    :, :, :num_channels, :, :
+                ]  # (1, 1, C, 1, E)
             emb_x = emb_x + channel_pe  # Broadcast addition to (B, Seq, C, L, E) + (1, 1, C, 1, E)
             emb_x = emb_x.view(batch_size, seq_len, num_channels * num_features, self.embed_dim)  # (B, Seq, C*L, E)
 
@@ -247,7 +274,7 @@ class TSPFNEncoder(nn.Module, ABC):
             emb_x += pos_broadcasted
 
         elif self.positional_encoding == "learned":
-            emb_x, emb_y = self.model.add_embeddings(
+            emb_x, emb_y = self.add_embeddings(
                 emb_x,
                 emb_y,
                 data_dags=None,
@@ -270,8 +297,6 @@ class TSPFNEncoder(nn.Module, ABC):
             embedded_input,
             single_eval_pos=single_eval_pos,
             cache_trainset_representation=False,
-            recompute_layer=self.recompute_layer,
-            save_peak_mem_factor=None,
         )
         out_query = output[:, single_eval_pos:, :]  # (B, Query, num_features + 1, d_model)
 

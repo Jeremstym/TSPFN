@@ -15,7 +15,7 @@ import omegaconf
 import typing
 import collections
 from tspfn.pretraining.tspfn_module import TSPFNPretraining
-from tspfn.evaluation.tspfn_evaluate import TSPFNEvaluating
+from tspfn.finetuning.tspfn_finetune import TSPFNFineTuning
 from data.data_module import TSPFNDataModule
 from data.utils.config import register_omegaconf_resolvers, instantiate_config_node_leaves
 from data.utils.saving import resolve_model_checkpoint_path
@@ -24,8 +24,10 @@ from dotenv import load_dotenv
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, open_dict
 from pytorch_lightning import Trainer, seed_everything
+from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.loggers import CometLogger, Logger
 import pytorch_lightning as pl
+from torch.utils.checkpoint import checkpoint
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +81,7 @@ class TSPFNRunner(ABC):
                 list,
                 tuple,
                 set,
+                int,
                 omegaconf.base.ContainerMetadata,
                 omegaconf.base.Metadata,
             ]
@@ -108,7 +111,6 @@ class TSPFNRunner(ABC):
         # Instantiate datamodule
         datamodule: TSPFNDataModule = hydra.utils.instantiate(cfg.data, _recursive_=False)
 
-        # Instantiate Lightning Trainer
         trainer: Trainer = hydra.utils.instantiate(cfg.trainer, logger=experiment_logger, callbacks=callbacks)
         trainer.logger.log_hyperparams(Namespace(**cfg))  # Save config to logger.
 
@@ -118,11 +120,32 @@ class TSPFNRunner(ABC):
 
         if cfg.ckpt:  # Load pretrained model if checkpoint is provided
             if cfg.weights_only:
-                logger.info(f"Loading weights from {ckpt_path}")
-                model.load_state_dict(
-                    torch.load(ckpt_path, map_location=model.device, weights_only=cfg.weights_only)["state_dict"],
-                    strict=cfg.strict,
-                )
+                model_ckpt = torch.load(ckpt_path, map_location=model.device, weights_only=cfg.weights_only)
+                if "state_dict" in model_ckpt:
+                    model.load_state_dict(model_ckpt["state_dict"], strict=cfg.strict)
+                else:
+                    model.load_state_dict(model_ckpt, strict=cfg.strict)
+                # model.load_state_dict(
+                #     torch.load(ckpt_path, map_location=model.device, weights_only=cfg.weights_only)["state_dict"],
+                #     strict=cfg.strict,
+                # )
+                if not cfg.strict:
+                    missing_keys = set(model.state_dict().keys()) - set(
+                        torch.load(ckpt_path, map_location=model.device, weights_only=cfg.weights_only)[
+                            "state_dict"
+                        ].keys()
+                    )
+                    unexpected_keys = set(
+                        torch.load(ckpt_path, map_location=model.device, weights_only=cfg.weights_only)[
+                            "state_dict"
+                        ].keys()
+                    ) - set(model.state_dict().keys())
+                    logger.warning(f"Missing keys when loading weights: {missing_keys}")
+                    logger.warning(f"Unexpected keys when loading weights: {unexpected_keys}")
+            #         modelkeys = list(model.state_dict().keys())
+            #         loadkeys = list(torch.load(ckpt_path, map_location=model.device)["state_dict"].keys())
+            #         commonkeys = list(set(modelkeys).intersection(loadkeys))
+            #         print(commonkeys)
             else:
                 logger.info(f"Loading model from {ckpt_path}")
                 model = model.load_from_checkpoint(ckpt_path, strict=cfg.strict)
@@ -146,7 +169,7 @@ class TSPFNRunner(ABC):
                 print(f"Best model checkpoint saved at {trainer.checkpoint_callback.best_model_path}")
             if cfg.test:
                 trainer.test(model, datamodule=datamodule)
-        elif isinstance(model, TSPFNEvaluating):
+        elif isinstance(model, TSPFNFineTuning):
             if cfg.train:
                 if cfg.resume:
                     assert cfg.ckpt is not None, "To resume training, a checkpoint path must be provided in cfg.ckpt"
