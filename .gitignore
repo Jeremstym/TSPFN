@@ -6,3 +6,5 @@
 
 # Remove unnecessary files
 *.DS_Store
+
+*.env
