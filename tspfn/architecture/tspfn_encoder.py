@@ -7,6 +7,7 @@ from abc import ABC
 import einops
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from functools import partial
 import types
 from tabpfn.model_loading import load_model_criterion_config
@@ -256,7 +257,7 @@ class TSPFNEncoder(nn.Module, ABC):
         if num_features % self.features_per_group_patch != 0:
             X_full = F.pad(X_full, (0, 0, 0, 0, 0, self.features_per_group_patch - (num_features % self.features_per_group_patch)), "constant", 0)
             num_features = X_full.shape[-1]
-            
+
         num_features = num_features // self.features_per_group_patch  # Adjust for features per group
         if self.positional_encoding == "rope" or self.positional_encoding == "cwpe+rope":
             for layer in self.transformer_encoder.layers:
