@@ -22,7 +22,7 @@ def _compute_rope_embeddings(f_per_ch, d_k, device):
     freqs = torch.outer(t_pos, inv_freq)
     emb = torch.cat((freqs, freqs), dim=-1)
 
-    # Reshape for broadcasting : [1 (seq), 1 (ch), f_per_ch, 1 (heads), d_k]
+    # Reshape pour broadcasting : [1 (seq), 1 (ch), f_per_ch, 1 (heads), d_k]
     cos = emb.cos().view(1, 1, -1, 1, d_k)
     sin = emb.sin().view(1, 1, -1, 1, d_k)
     return cos, sin
@@ -34,16 +34,16 @@ def _apply_channel_rope(q_feat, k_feat, num_channels):
     assert f % num_channels == 0, f"Feature length {f} must be divisible by num_channels {num_channels}"
     f_per_ch = f // num_channels
 
-    # Multichannel-aware reshape : [Seq, Features, Heads, D_k] -> [Seq, num_channels, features_per_channel, Heads, D_k]
+    # 1. Passage en mode multi-channel
     q_feat = q_feat.view(s, num_channels, f_per_ch, h, d_k)
     k_feat = k_feat.view(s, num_channels, f_per_ch, h, d_k)
 
-    # Apply RoPE on the features of each channel
+    # 2. Application de la rotation
     cos, sin = _compute_rope_embeddings(f_per_ch, d_k, q_feat.device)
     q_feat = (q_feat * cos) + (_rotate_half(q_feat) * sin)
     k_feat = (k_feat * cos) + (_rotate_half(k_feat) * sin)
 
-    # Reshape back to original : [Seq, num_channels, features_per_channel, Heads, D_k] -> [Seq, Features, Heads, D_k]
+    # 3. Retour à la forme plate
     return q_feat.view(s, f, h, d_k), k_feat.view(s, f, h, d_k)
 
 
@@ -55,15 +55,16 @@ def rope_compute_heads_wrapper(
     qkv,
     dropout_p=None,
     softmax_scale=None,
+    time_points=None,
+    num_channels=None,
     original_func=None,
-    **kwargs,
+    **kwargs
 ):
     """
     Wrapper patché pour MultiHeadAttention.compute_attention_heads.
     Filtre les appels pour n'appliquer le RoPE que sur les features.
     """
-
-    # Call context inspection to determine if we are in the right attention module
+    # A. Détection du contexte (évite de toucher aux items)
     frame = inspect.currentframe().f_back
     caller_self = frame.f_locals.get("self", None)
     if not getattr(caller_self, "is_feature_attn", False):
@@ -71,7 +72,6 @@ def rope_compute_heads_wrapper(
 
     current_num_channels = getattr(caller_self, "num_channels")
     current_time_points = getattr(caller_self, "time_points")
-
     if qkv is not None:
         q, k, v = qkv.unbind(dim=-3)
     elif kv is not None:
