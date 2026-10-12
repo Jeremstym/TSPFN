@@ -253,6 +253,10 @@ class TSPFNEncoder(nn.Module, ABC):
             num_channels, seq_len, num_features, embed_dim = X_full.shape
             batch_size = 1  # If already tokenized, we assume batch size of 1 for simplicity
         
+        if num_features % self.features_per_group_patch != 0:
+            adjusted = True
+        else:
+            adjusted = False
         num_features = num_features // self.features_per_group_patch  # Adjust for features per group
         if self.positional_encoding == "rope" or self.positional_encoding == "cwpe+rope":
             for layer in self.transformer_encoder.layers:
@@ -268,12 +272,12 @@ class TSPFNEncoder(nn.Module, ABC):
             print(f"Adjusted seq_len: {seq_len}")
             print(f"Adjusted batch_size: {batch_size}")
             print(f"Adjusted embed_dim: {self.embed_dim}")
-            X_full = X_full.view(seq_len, batch_size, num_channels * num_features * self.features_per_group_patch)  # (Seq, B, C*F)
+            X_full = X_full.view(seq_len, batch_size, num_channels * num_features * self.features_per_group_patch + adjusted)  # (Seq, B, C*F)
             emb_x, emb_y, single_eval_pos = self.encode_x_and_y(X_full, y_train)
         else:
             X_full = X_full.transpose(0, 1)  # (C, Seq, F, E) -> (Seq, C, F, E)
             X_full = X_full.unsqueeze(1)  # (Seq, 1, C, F, E)
-            X_full = X_full.view(seq_len, 1, num_channels * num_features * self.features_per_group_patch, embed_dim)  # (Seq, B, C*T, E)
+            X_full = X_full.view(seq_len, 1, num_channels * num_features * self.features_per_group_patch + adjusted, embed_dim)  # (Seq, B, C*T, E)
             emb_x, emb_y, single_eval_pos = self.encode_x_and_y(X_full, y_train, already_tokenized=True)
 
         if self.positional_encoding == "none" or self.positional_encoding == "rope":
