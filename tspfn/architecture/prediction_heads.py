@@ -29,6 +29,8 @@ class PFNPredictionHead(nn.Module):
         num_classes: int = 10, # Default to 10 classes as in original TabPFN
         updated_pfn_path: Union[Path, None] = None,
         random_init: bool = False,
+        cache_trainset_representation: bool = False,
+        n_out: int = 10,
         **kwargs,
     ):
         """Initializes class instance.

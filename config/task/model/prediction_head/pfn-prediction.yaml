@@ -3,3 +3,5 @@ in_features: ${task.embed_dim}
 tabpfn_kwargs: ${task.model.encoder.tabpfn_kwargs}
 updated_pfn_path: ${task.model.encoder.updated_pfn_path}
 num_classes: ${data.num_classes}
+cache_trainset_representation: ${task.model.encoder.cache_trainset_representation}
+n_out: ${task.model.encoder.n_out}
