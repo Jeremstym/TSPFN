@@ -44,7 +44,7 @@ class TSPFNEncoder(nn.Module, ABC):
         nn.init.normal_(self.cwpe.weight, mean=0, std=embed_dim**-0.5)
 
         # model, _, model_config = load_model_criterion_config(**tabpfn_kwargs)
-        config = parse_config(tabpfn_kwargs)
+        config, _ = parse_config(tabpfn_kwargs)
         model = PerFeatureTransformer(
             config=config,
             # Things that were explicitly passed inside `build_model()`
